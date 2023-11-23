@@ -5,6 +5,7 @@ from datetime import datetime
 from random import choice, randint
 from typing import AsyncGenerator, Tuple
 from urllib.parse import quote_plus
+import codecs
 
 import aiofiles
 import aiohttp
@@ -14,6 +15,7 @@ import json
 from searchinfo import SearchInfo
 from batch import Batch
 from ENUMS import Color, Size, Time, Type, UsageRights
+
 
 class ImageDownloader:
     GOOGLE_IMAGES_BASE_URL = "https://www.google.com/imghp"
@@ -159,8 +161,8 @@ class ImageDownloader:
             batchexecute_data = AF_initDataCallback[56][1][0][0][0][0]["444383007"][12]
             info.grid_state = batchexecute_data[11]
             info.cursor = (
-                batchexecute_data[16][3],
-                batchexecute_data[16][4],
+                codecs.decode(batchexecute_data[16][3], 'unicode_escape'),
+                codecs.decode(batchexecute_data[16][4], 'unicode_escape'),
             )
 
         results = []
@@ -223,7 +225,10 @@ class ImageDownloader:
         ) + (100000 * info.page_num)
         return batch
 
-    def _generate_batchexecute_post(self, info: SearchInfo) -> Tuple[dict, int]:
+    def _generate_batchexecute_post(self, info: SearchInfo) -> None:
+        if info.cursor is None:
+            info.batchexecute_post = None
+            return 
         data = (
             [None, None, info.grid_state]
             + 25 * [None]
@@ -294,7 +299,7 @@ class ImageDownloader:
         self, method: str, url: str, params=None
     ) -> aiohttp.ClientResponse:
         if not self.session:
-            self.session = aiohttp.ClientSession(json_serialize=json.dumps)
+            self.session = aiohttp.ClientSession()
         response = await self.session.request(
             method, url, headers=self.headers, params=params
         )
@@ -305,9 +310,10 @@ if __name__ == "__main__":
 
     async def main():
         downloader = ImageDownloader()
-        async for query in downloader.search("NASA space photos"):
+        async for query in downloader.search("Hello world"):
             print(query.to_dict()["data"][0])
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(main())
+# f.req=[[["HoAMBc","[null,null,[1,null,199,1,1920,[],[],[],null,null,null,166],null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,[\"hello world\",\"ru\",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,\"hp\",null,null,null,null,null,null,null,null,[]],null,null,null,null,null,null,null,null,[null,\"CAE=\",\"GGggAA==\"]]",null,"generic"]]]&

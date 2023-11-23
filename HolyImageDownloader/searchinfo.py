@@ -9,8 +9,8 @@ class SearchInfo:
     rpcids: str = None
     f_sid: str = None
     bl: str = None
-    grid_state: list = None
-    cursor: tuple = None
-    batchexecute_params: dict = None
-    batchexecute_post: dict = None
+    grid_state: list | None = None
+    cursor: tuple | None = None
+    batchexecute_params: dict | None = None
+    batchexecute_post: dict | None = None
     page_num: int = 1
