@@ -12,10 +12,14 @@ import aiohttp
 from bs4 import BeautifulSoup
 import json
 
-from searchinfo import SearchInfo
-from batch import Batch
-from ENUMS import Color, Size, Time, Type, UsageRights
-
+try:
+    from searchinfo import SearchInfo
+    from batch import Batch
+    from ENUMS import Color, Size, Time, Type, UsageRights
+except ModuleNotFoundError:
+    from .searchinfo import SearchInfo
+    from .batch import Batch
+    from .ENUMS import Color, Size, Time, Type, UsageRights
 
 class ImageDownloader:
     GOOGLE_IMAGES_BASE_URL = "https://www.google.com/imghp"
@@ -88,7 +92,6 @@ class ImageDownloader:
             )
             yield batch
 
-
     async def download(
         self,
         search_query: str,
@@ -110,9 +113,7 @@ class ImageDownloader:
         path += search_query + "/"
         if not os.path.isdir(path):
             os.mkdir(path)
-        if not number_of_downloaders:
-            number_of_downloaders = 10
-        elif number_of_downloaders < 0:
+        if not number_of_downloaders or number_of_downloaders < 0:
             number_of_downloaders = 10
         for _ in range(number_of_downloaders):
             tasks.append(loop.create_task(self._downloader(queue, path, new_size)))
@@ -311,9 +312,8 @@ if __name__ == "__main__":
     async def main():
         downloader = ImageDownloader()
         async for query in downloader.search("Hello world"):
-            print(query.to_dict()["data"][0])
+            print(len(query.results))
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(main())
-# f.req=[[["HoAMBc","[null,null,[1,null,199,1,1920,[],[],[],null,null,null,166],null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,[\"hello world\",\"ru\",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,\"hp\",null,null,null,null,null,null,null,null,[]],null,null,null,null,null,null,null,null,[null,\"CAE=\",\"GGggAA==\"]]",null,"generic"]]]&

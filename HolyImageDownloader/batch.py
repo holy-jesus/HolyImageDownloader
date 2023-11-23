@@ -1,12 +1,14 @@
 from typing import Tuple, List
 import asyncio
+from pathlib import Path
 
 from aiohttp import ClientSession
 import aiofiles
 
-from result import Result
-from pathlib import Path
-
+try:
+    from result import Result
+except ModuleNotFoundError:
+    from .result import Result
 
 class Batch:
     def __init__(self, results: dict, session: ClientSession) -> None:

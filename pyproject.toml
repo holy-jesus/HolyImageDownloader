@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "HolyImageDownloader"
+version = "0.0.1"
+dependencies = [
+    "aiofiles==23.2.1",
+    "aiohttp==3.9.0",
+    "beautifulsoup4==4.12.2",
+    "lxml==4.9.3",
+    "Pillow==10.1.0",
+    "typer==0.9.0"
+]
+requires-python = ">=3.10"
+authors = [
+  {name = "holy-jesus", email = "hj@holy-coder.ru"}
+]
+maintainers = [
+  {name = "holy-jesus", email = "hj@holy-coder.ru"}
+]
+description = "Downloads images from Google in matter seconds."
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["google", "google images", "images", "download images"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://github.com/holy-jesus/HolyImageDownloader"
+Issues = "https://github.com/holy-jesus/HolyImageDownloader/issues"
+
+[project.scripts]
+ImageDownloader = "HolyImageDownloader.__main__:app"
