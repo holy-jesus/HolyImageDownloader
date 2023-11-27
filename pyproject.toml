@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "HolyImageDownloader"
-version = "0.0.1"
+dynamic = ['version']
 dependencies = [
     "aiofiles==23.2.1",
     "aiohttp==3.9.0",
@@ -35,3 +35,6 @@ Issues = "https://github.com/holy-jesus/HolyImageDownloader/issues"
 
 [project.scripts]
 ImageDownloader = "HolyImageDownloader.__main__:app"
+
+[tool.setuptools.dynamic]
+version = {attr = "HolyImageDownloader.__version__"}

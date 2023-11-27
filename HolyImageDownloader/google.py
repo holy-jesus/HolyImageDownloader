@@ -1,10 +1,10 @@
 import asyncio
-import os
 import re
 from datetime import datetime
 from random import choice, randint
 from typing import AsyncGenerator, Tuple
 from urllib.parse import quote_plus
+from pathlib import Path
 import codecs
 
 import aiofiles
@@ -95,52 +95,60 @@ class ImageDownloader:
     async def download(
         self,
         search_query: str,
-        size: Size = None,
-        color: Color = None,
-        type: Type = None,
-        time: Time = None,
-        usage_rights: UsageRights = None,
-        number_of_downloaders: int = None,
-        new_size: Tuple[int, int] = None,
+        path: Path | str | None = None,
+        max_images: int | None = None,
+        size: Size | None = None,
+        color: Color | None = None,
+        type: Type | None = None,
+        time: Time | None = None,
+        usage_rights: UsageRights | None = None,
+        number_of_downloaders: int | None = None,
+        new_size: Tuple[int, int] | None = None,
+        new_format: str | None = None,
     ):
-        i = 1
-        tasks = []
+        IMAGE_NUM = 0
+        tasks: list[asyncio.Task] = []
         loop = asyncio.get_event_loop()
         queue = asyncio.Queue()
-        path = os.getcwd() + "/images/"
-        if not os.path.isdir(path):
-            os.mkdir(path)
-        path += search_query + "/"
-        if not os.path.isdir(path):
-            os.mkdir(path)
+        if not path:
+            path = Path().joinpath(f"./images/{search_query.replace(' ', '')}")
+        elif isinstance(path, str):
+            path = Path(path)
+        path.mkdir(parents=True, exist_ok=True)
         if not number_of_downloaders or number_of_downloaders < 0:
             number_of_downloaders = 10
         for _ in range(number_of_downloaders):
-            tasks.append(loop.create_task(self._downloader(queue, path, new_size)))
+            tasks.append(loop.create_task(self._downloader(queue, path, new_size, new_format)))
         async for batch in self.search(
             search_query, size, color, type, time, usage_rights
         ):
             for result in batch.results:
-                await queue.put((result.image, str(i)))
-                i += 1
+                if max_images and max_images != -1 and IMAGE_NUM >= max_images:
+                    break
+                await queue.put((result.image, str(IMAGE_NUM)))
+                IMAGE_NUM += 1
+            if max_images and max_images != -1 and IMAGE_NUM >= max_images:
+                break
         await queue.join()
         for task in tasks:
             task.cancel()
 
+
     async def _downloader(
         self,
         queue: asyncio.Queue,
-        path_to_save: str,
-        new_size: Tuple[int, int] = None,
+        path: Path,
+        new_size: Tuple[int, int] | None = None,
+        new_format: str | None = None,
     ):
         while True:
             image, filename = await queue.get()
-            content, format = await image.download(new_size)
+            content, format = await image.download(new_size, new_format)
             if content is None:
                 queue.task_done()
                 continue
             async with aiofiles.open(
-                f"{path_to_save}/{filename}.{format}", "wb"
+                f"{path.absolute()}/{filename}.{format}", "wb"
             ) as file:
                 await file.write(content)
             queue.task_done()

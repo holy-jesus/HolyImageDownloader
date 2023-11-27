@@ -1,10 +1,11 @@
 import asyncio
 from io import BytesIO
-from typing import Tuple, Union
 import imghdr
 
 from aiohttp import ClientSession, ClientConnectionError
+import filetype
 from PIL import Image as PILImage
+from PIL import UnidentifiedImageError
 
 
 class Image:
@@ -18,37 +19,46 @@ class Image:
     def __repr__(self) -> str:
         return f"Image(url={self.url}, size={self.width}x{self.height})"
 
-    def _resize_reformat_picture(self, image: bytes, new_size: Tuple[int, int] = None):
-        im = PILImage.open(BytesIO(image))
-        if new_size:
+    def _resize_reformat_picture(
+        self,
+        image: bytes,
+        new_size: tuple[int, int] | None = None,
+        new_format: str | None = None,
+    ) -> tuple[bytes, str] | tuple[None, None]:
+        MAINTAIN_ASPECT_RATION = True
+        try:
+            im = PILImage.open(BytesIO(image))
+        except UnidentifiedImageError:
+            return None, None
+        if new_size and MAINTAIN_ASPECT_RATION:
+            im.thumbnail(new_size)
+        elif new_size:
             im = im.resize(new_size)
         buffered = BytesIO()
-        im.save(buffered, im.format)
+        im.save(buffered, new_format or im.format)
         return buffered.getvalue(), im.format.lower()
 
     def to_dict(self):
         return {"url": self.url, "size": self.size}
 
     async def download(
-        self,
-        new_size: Tuple[int, int] = None,
-    ) -> Union[Tuple[bytes, str], Tuple[None, None]]:
+        self, new_size: tuple[int, int] | None = None, new_format: str | None = None
+    ) -> tuple[bytes, str] | tuple[None, None]:
         try:
-            response = await self.session.get(self.url, timeout=10)
-            if "image" not in response.headers.get("Content-Type", ""):
-                return None, None
-            content = await response.content.read()
-            if new_size:
-                content, format = await asyncio.to_thread(
-                    self._resize_reformat_picture,
-                    content,
-                    new_size,
-                )
-            else:
-                format = imghdr.what(None, content)
-                if format is None:
-                    return None, None
-            return content, format
+            async with self.session.get(self.url, timeout=10) as response:
+                content = await response.content.read()
+                if new_size:
+                    content, format = await asyncio.to_thread(
+                        self._resize_reformat_picture,
+                        content,
+                        new_size,
+                        new_format,
+                    )
+                else:
+                    format = filetype.guess_extension(content)
+                    if format is None:
+                        return None, None
+                return content, format
         except ClientConnectionError:
             return None, None
         except TimeoutError:
