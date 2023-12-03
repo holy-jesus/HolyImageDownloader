@@ -5,7 +5,7 @@
 This module is in an early stage of development, hence there's a lot of unimplemented functionality, broken features, and inadequate documentation, etc. Additionally, with each commit, everything can significantly change, break, etc.
 
 ## Key Features
-- This module doesn't utilize Selenium, only direct requests to Google's internal API, reducing computer load and significantly decreasing image download time.
+- This module doesn't utilize Selenium, only direct requests to Google's browser API, reducing computer load and significantly decreasing image download time.
 
 ## Installation
 
@@ -16,20 +16,20 @@ pip install git+https://github.com/holy-jesus/HolyImageDownloader
 ## Usage
 
 ```bash
-ImageDownloader "Your search query" --path ./path/ --max-images 30 --downloaders 5
+ImageDownloader "Your search query" --path ./path/ --limit 30 --downloaders 5
 ```
 
 If the above command didn't work:
 
 ```bash
-python -m HolyImageDownloader "Your search query" --path ./path/ --max-images 30 --downloaders 5
+python -m HolyImageDownloader "Your search query" --path ./path/ --limit 30 --downloaders 5
 ```
 
 `--path` - Optional, specifies the folder where the program will download all images. Default: ./images/your_search_query/
 
-`--max-images` - Optional, denotes the number of images to download. Use -1 to download all images. Default: -1
+`--limit` - Optional, denotes the number of images to download. Use -1 to download all images. Default: -1
 
-`--downloaders` - Optional, number of parallel image downloaders. Higher values speed up the process; excessively large numbers might have adverse effects. Default: 10
+`--downloaders` - Optional, number of parallel image downloaders. Higher values speed up the process; excessively large numbers might have adverse effects. Default: 50
 
 You can also run the command without specifying a search query; the program will prompt you for it:
 
@@ -77,5 +77,6 @@ Google reserves the right to suspend or terminate your access to the services or
 - we reasonably believe that your conduct causes harm or liability to a user, third party or Google – for example, by hacking, phishing, harassing, spamming, misleading others or scraping content that doesn’t belong to you
 </blockquote>
 
-You can read the full [Terms of Service from Google via this link](https://policies.google.com/terms?hl=en-EN).
+You can read the full [Terms of Service from Google via this link](https://policies.google.com/terms).
 
+###### Translated using ChatGPT

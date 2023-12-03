@@ -9,7 +9,7 @@ class Website:
         self.name = unquote_plus(json["name"])
 
     def __repr__(self) -> str:
-        return f"Website(title={self.title}, name={self.name}, url={self.url}, base_url={self.base_url}"
+        return f"Website(title={self.title}, name={self.name}, url={self.url}, base_url={self.base_url})"
 
     def to_dict(self):
         return {"url": self.url, "base_url": self.base_url, "title": self.title, "name": self.name}

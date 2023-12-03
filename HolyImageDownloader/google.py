@@ -7,40 +7,35 @@ from urllib.parse import quote_plus
 from pathlib import Path
 import codecs
 
+from rich.progress import Progress, SpinnerColumn, TextColumn
 import aiofiles
 import aiohttp
 from bs4 import BeautifulSoup
 import json
+from rich.console import Console
 
 try:
     from searchinfo import SearchInfo
     from batch import Batch
+    from result import Result
     from ENUMS import Color, Size, Time, Type, UsageRights
+    from config import HEADERS, URL
+    from downloader import Downloader
 except ModuleNotFoundError:
     from .searchinfo import SearchInfo
     from .batch import Batch
+    from .result import Result
     from .ENUMS import Color, Size, Time, Type, UsageRights
+    from .config import HEADERS, URL
+    from .downloader import Downloader
+
+console = Console()
+
 
 class ImageDownloader:
-    GOOGLE_IMAGES_BASE_URL = "https://www.google.com/imghp"
-    GOOGLE_IMAGE_SEARCH_URL = "https://www.google.com/search"
-    GOOGLE_BATCHEXECUTE_URL = (
-        "https://www.google.com/_/VisualFrontendUi/data/batchexecute"
-    )
-
-    def __init__(self) -> None:
+    def __init__(self, session: aiohttp.ClientSession | None = None) -> None:
         self.session: aiohttp.ClientSession = None
-        self.headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        }
+        self.headers = HEADERS
 
     def __del__(self):
         pass
@@ -63,33 +58,27 @@ class ImageDownloader:
         quoted_search_query = quote_plus(search_query)
         params = {"q": quoted_search_query, "oq": quoted_search_query}
         tbs = ",".join(q.value for q in (size, color, type, time, usage_rights) if q)
-        search_info = SearchInfo(search_query, tbs, params)
+        search_info = SearchInfo(search_query=search_query, tbs=tbs, params=params)
         return self._generator(search_info)
 
-    async def _generator(
-        self, search_info: SearchInfo
-    ) -> AsyncGenerator[Batch, None]:
+    async def _generator(self, search_info: SearchInfo) -> AsyncGenerator[Batch, None]:
         await self._get_params(search_info)
         # tbs = search_params.get("tbs", None)
         response = await self._make_request(
-            "GET", self.GOOGLE_IMAGE_SEARCH_URL, params=search_info.params
+            "GET", URL.SEARCH, params=search_info.params
         )
         content = await response.content.read()
-        batch = self._parse_page(
-            content, search_info
-        )
+        batch = self._parse_page(content, search_info)
         yield batch
         while search_info.batchexecute_post is not None:
             response = await self.session.post(
-                self.GOOGLE_BATCHEXECUTE_URL,
+                URL.BATCHEXECUTE,
                 data=search_info.batchexecute_post,
                 params=search_info.batchexecute_params,
                 headers=self.headers,
             )
             content = await response.text()
-            batch = self._parse_batchexecute(
-                content, search_info
-            )
+            batch = self._parse_batchexecute(content, search_info)
             yield batch
 
     async def download(
@@ -102,37 +91,78 @@ class ImageDownloader:
         type: Type | None = None,
         time: Time | None = None,
         usage_rights: UsageRights | None = None,
-        number_of_downloaders: int | None = None,
+        number_of_downloaders: int | None = 50,
         new_size: Tuple[int, int] | None = None,
         new_format: str | None = None,
+        maintain_aspect_ratio: bool = False,
     ):
-        IMAGE_NUM = 0
-        tasks: list[asyncio.Task] = []
         loop = asyncio.get_event_loop()
-        queue = asyncio.Queue()
+        max_images = max_images if max_images else -1
         if not path:
-            path = Path().joinpath(f"./images/{search_query.replace(' ', '')}")
+            path = Path().joinpath(f"./images/{search_query}/")
         elif isinstance(path, str):
             path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
-        if not number_of_downloaders or number_of_downloaders < 0:
-            number_of_downloaders = 10
-        for _ in range(number_of_downloaders):
-            tasks.append(loop.create_task(self._downloader(queue, path, new_size, new_format)))
-        async for batch in self.search(
-            search_query, size, color, type, time, usage_rights
-        ):
-            for result in batch.results:
-                if max_images and max_images != -1 and IMAGE_NUM >= max_images:
+        if not number_of_downloaders or number_of_downloaders <= 0:
+            number_of_downloaders = 50
+        results = []
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            task = progress.add_task(description="Fetching images...", total=None)
+            async for batch in self.search(
+                search_query, size, color, type, time, usage_rights
+            ):
+                results += batch.results
+                progress.update(task, description=f"Fetching images... {len(results)} fetched.")
+                if max_images != -1 and len(results) > max_images:
                     break
-                await queue.put((result.image, str(IMAGE_NUM)))
-                IMAGE_NUM += 1
-            if max_images and max_images != -1 and IMAGE_NUM >= max_images:
-                break
-        await queue.join()
-        for task in tasks:
-            task.cancel()
-
+        results = results[:max_images] if len(results) > max_images else results
+        downloader = Downloader(
+            results,
+            path,
+            self.session,
+            number_of_downloaders,
+            new_size,
+            new_format,
+            maintain_aspect_ratio,
+        )
+        downloader_task = loop.create_task(downloader.download())
+        with Progress() as progress:
+            task = progress.add_task("[green]Downloading...", total=len(results))
+            while not downloader_task.done():
+                await asyncio.sleep(0.1)
+                progress.update(task, completed=downloader.downloaded)
+        # IMAGE_NUM = 0
+        # tasks: list[asyncio.Task] = []
+        # loop = asyncio.get_event_loop()
+        # queue = asyncio.Queue()
+        # if not path:
+        #     path = Path().joinpath(f"./images/{search_query}/")
+        # elif isinstance(path, str):
+        #     path = Path(path)
+        # path.mkdir(parents=True, exist_ok=True)
+        # if not number_of_downloaders or number_of_downloaders < 0:
+        #     number_of_downloaders = 10
+        # for _ in range(number_of_downloaders):
+        #     tasks.append(
+        #         loop.create_task(self._downloader(queue, path, new_size, new_format))
+        #     )
+        # async for batch in self.search(
+        #     search_query, size, color, type, time, usage_rights
+        # ):
+        #     for result in batch.results:
+        #         if max_images and max_images != -1 and IMAGE_NUM >= max_images:
+        #             break
+        #         await queue.put((result.image, str(IMAGE_NUM)))
+        #         IMAGE_NUM += 1
+        #     if max_images and max_images != -1 and IMAGE_NUM >= max_images:
+        #         break
+        # await queue.join()
+        # for task in tasks:
+        #     task.cancel()
 
     async def _downloader(
         self,
@@ -142,11 +172,14 @@ class ImageDownloader:
         new_format: str | None = None,
     ):
         while True:
-            image, filename = await queue.get()
-            content, format = await image.download(new_size, new_format)
+            result, filename = await queue.get()
+            result: Result = result
+            content, format = await result.image.download(new_size, new_format)
             if content is None:
-                queue.task_done()
-                continue
+                content, format = await result.preview.download(new_size, new_format)
+                if content is None:
+                    queue.task_done()
+                    continue
             async with aiofiles.open(
                 f"{path.absolute()}/{filename}.{format}", "wb"
             ) as file:
@@ -155,27 +188,26 @@ class ImageDownloader:
 
     def _parse_AF_initDataCallback(self, AF_initDataCallback: dict, info: SearchInfo):
         if len(AF_initDataCallback[56]) < 2:
-            # По этому поисковому запросу нету картинок
+            # There are no images for this search query
             info.grid_state = None
             info.cursor = None
             info.batchexecute_post = None
-
             return None
-        elif not AF_initDataCallback[56][1][0][0][0][0]["444383007"][12][16]:
-            # Картинки законичились
+        elif not AF_initDataCallback[56][1][0][-1][0][0]["444383007"][12][16]:
+            # The pictures are over
             info.grid_state = None
             info.cursor = None
             info.batchexecute_post = None
         else:
-            batchexecute_data = AF_initDataCallback[56][1][0][0][0][0]["444383007"][12]
+            # elif AF_initDataCallback[56][1][0][-1][0][0]["444383007"][12][0] == "GRID_STATE0":
+            batchexecute_data = AF_initDataCallback[56][1][0][-1][0][0]["444383007"][12]
             info.grid_state = batchexecute_data[11]
             info.cursor = (
-                codecs.decode(batchexecute_data[16][3], 'unicode_escape'),
-                codecs.decode(batchexecute_data[16][4], 'unicode_escape'),
+                codecs.decode(batchexecute_data[16][3], "unicode_escape"),
+                codecs.decode(batchexecute_data[16][4], "unicode_escape"),
             )
-
         results = []
-        for result in AF_initDataCallback[56][1][0][0][1][0]:
+        for result in AF_initDataCallback[56][1][0][-1][1][0]:
             if result[0][0]["444383007"][1] is None:
                 continue
             result = result[0][0]["444383007"][1]
@@ -198,9 +230,7 @@ class ImageDownloader:
             results.append({"preview": preview, "image": image, "website": website})
         return results
 
-    def _parse_page(
-        self, content: str, info: SearchInfo
-    ) -> Batch:
+    def _parse_page(self, content: str, info: SearchInfo) -> Batch:
         batch = None
         soup = BeautifulSoup(content, "lxml")
         for script in soup.select("script"):
@@ -215,17 +245,21 @@ class ImageDownloader:
             elif text.startswith("var AF_initDataKeys"):
                 info.rpcids = re.findall(r"'ds:1' : {id:'(.*)',", text)[0]
             elif text.startswith("window.WIZ_global_data"):
-                WIZ_global_data = json.loads(re.findall(r"window.WIZ_global_data = (.*);", text)[0])
+                WIZ_global_data = json.loads(
+                    re.findall(r"window.WIZ_global_data = (.*);", text)[0]
+                )
                 info.f_sid = WIZ_global_data["FdrFJe"]
                 info.bl = WIZ_global_data["cfb2h"]
         self._generate_batchexecute_post(info)
         self._generate_batchexecute_params(info)
         return batch
 
-    def _parse_batchexecute(
-        self, content: str, info: SearchInfo
-    ) -> Batch:
-        AF_initDataCallback = json.loads(re.findall(r'"HoAMBc","(.*)",null,null,null,"generic"]]\n', content)[0].replace("\\\"", "\"").replace("\\\\\"", "\\\""))
+    def _parse_batchexecute(self, content: str, info: SearchInfo) -> Batch:
+        AF_initDataCallback = json.loads(
+            re.findall(r'"HoAMBc","(.*)",null,null,null,"generic"]]\n', content)[0]
+            .replace('\\"', '"')
+            .replace('\\\\"', '\\"')
+        )
         results = self._parse_AF_initDataCallback(AF_initDataCallback, info)
         batch = Batch(results, self.session)
         self._generate_batchexecute_post(info)
@@ -237,7 +271,7 @@ class ImageDownloader:
     def _generate_batchexecute_post(self, info: SearchInfo) -> None:
         if info.cursor is None:
             info.batchexecute_post = None
-            return 
+            return
         data = (
             [None, None, info.grid_state]
             + 25 * [None]
@@ -261,11 +295,14 @@ class ImageDownloader:
         info.batchexecute_post = {"f.req": f_req + "&"}
         info.page_num = info.grid_state[0]
 
-    def _generate_batchexecute_params(self, info: SearchInfo) -> dict:
+    def _generate_batchexecute_params(self, info: SearchInfo):
         now = datetime.now()
         info.batchexecute_params = {
+            "rpcids": info.rpcids,
             "source-path": "/search",
-            "hl": "en-US", # Получать язык пользователя?
+            "f.sid": info.f_sid,
+            "bl": info.bl,
+            "hl": "en-US",  # Get user language?
             "authuser": "",
             "soc-app": "162",
             "soc-platform": "1",
@@ -274,12 +311,10 @@ class ImageDownloader:
             + (3600 * now.hour + 60 * now.minute + now.second)
             + (100000 * 1),
             "rt": "c",
-            "f.sid": info.f_sid,
-            "bl": info.bl,
         }
 
     async def _get_params(self, search_info: SearchInfo):
-        response = await self._make_request("GET", self.GOOGLE_IMAGES_BASE_URL)
+        response = await self._make_request("GET", URL.BASE)
         content = await response.content.read()
         w, h = choice(
             (
@@ -291,10 +326,12 @@ class ImageDownloader:
                 (1024, 576),
             )
         )
-        search_info.params.update({
-            "biw": randint(int(w * 0.75), w),
-            "bih": randint(int(h * 0.75), h),
-        })
+        search_info.params.update(
+            {
+                "biw": randint(int(w * 0.75), w),
+                "bih": randint(int(h * 0.75), h),
+            }
+        )
         soup = BeautifulSoup(content, "lxml")
         div = soup.find("div", {"id": "tophf"})
         inputs = div.find_all("input")
@@ -318,9 +355,15 @@ class ImageDownloader:
 if __name__ == "__main__":
 
     async def main():
-        downloader = ImageDownloader()
-        async for query in downloader.search("Hello world"):
-            print(len(query.results))
+        try:
+            google = ImageDownloader()
+            # async for query in downloader.search("Hello world"):
+                # print(len(query.results))
+            await google.download("Hello world", "./images", 100)
+        except Exception:
+            console.print_exception(show_locals=False)
+        finally:
+            await google.session.close()
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
