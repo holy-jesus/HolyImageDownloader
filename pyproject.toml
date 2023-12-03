@@ -16,7 +16,6 @@ dependencies = [
     "colorama==0.4.6",
     "filetype==1.2.0",
     "frozenlist==1.4.0",
-    "HolyImageDownloader==0.0.3",
     "idna==3.4",
     "lxml==4.9.3",
     "markdown-it-py==3.0.0",
