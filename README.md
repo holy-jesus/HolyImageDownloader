@@ -16,13 +16,13 @@ pip install git+https://github.com/holy-jesus/HolyImageDownloader
 ## Usage
 
 ```bash
-ImageDownloader "Your search query" --path ./path/ --limit 30 --downloaders 5
+ImageDownloader "Your search query" --path ./path/ --limit 30 --downloaders 100
 ```
 
 If the above command didn't work:
 
 ```bash
-python -m HolyImageDownloader "Your search query" --path ./path/ --limit 30 --downloaders 5
+python -m HolyImageDownloader "Your search query" --path ./path/ --limit 30 --downloaders 100
 ```
 
 `--path` - Optional, specifies the folder where the program will download all images. Default: ./images/your_search_query/
