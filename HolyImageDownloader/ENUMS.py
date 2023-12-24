@@ -40,3 +40,9 @@ class Time(Enum):
 class UsageRights(Enum):
     CREATIVE_COMMONS_LICENSES = "il:cl"
     COMMERCIAL_AND_OTHER_LICENSES = "il:ol"
+
+
+class SafeSearch(Enum):
+    FILTER = "on"
+    BLUR = "images"
+    OFF = "off"

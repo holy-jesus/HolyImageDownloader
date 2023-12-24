@@ -131,3 +131,5 @@ dmypy.json
 images/
 trash
 .vscode
+offline*.html
+utils/

@@ -43,6 +43,8 @@ Search query:
 
 It is still not possible to specify image sizes, required image size, and search filters on the command line.
 
+By default SafeSearch set to FILTER so NSFW images wouldn't be downloaded
+
 ### If you want to use the module in your program:
 
 ```python
@@ -78,5 +80,3 @@ Google reserves the right to suspend or terminate your access to the services or
 </blockquote>
 
 You can read the full [Terms of Service from Google via this link](https://policies.google.com/terms).
-
-###### Translated using ChatGPT

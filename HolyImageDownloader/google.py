@@ -6,9 +6,12 @@ from typing import AsyncGenerator, Tuple
 from urllib.parse import quote_plus
 from pathlib import Path
 import codecs
+import os
+import ctypes
+import locale
 
 from rich.progress import Progress, SpinnerColumn, TextColumn
-import aiofiles
+
 import aiohttp
 from bs4 import BeautifulSoup
 import json
@@ -18,32 +21,34 @@ try:
     from searchinfo import SearchInfo
     from batch import Batch
     from result import Result
-    from ENUMS import Color, Size, Time, Type, UsageRights
+    from ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
     from config import HEADERS, URL
     from downloader import Downloader
 except ModuleNotFoundError:
     from .searchinfo import SearchInfo
     from .batch import Batch
     from .result import Result
-    from .ENUMS import Color, Size, Time, Type, UsageRights
+    from .ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
     from .config import HEADERS, URL
     from .downloader import Downloader
 
 console = Console()
+_type = type
 
 
 class ImageDownloader:
     def __init__(self, session: aiohttp.ClientSession | None = None) -> None:
-        self.session: aiohttp.ClientSession = None
+        self.session: aiohttp.ClientSession = session
         self.headers = HEADERS
 
     def __del__(self):
-        pass
         # asyncio.get_event_loop().create_task(self.session.close())
+        pass
 
     def search(
         self,
         search_query: str,
+        safe_search: SafeSearch = SafeSearch.FILTER,
         size: Size = None,
         color: Color = None,
         type: Type = None,
@@ -51,19 +56,43 @@ class ImageDownloader:
         usage_rights: UsageRights = None,
     ) -> AsyncGenerator[Batch, None]:
         if not search_query:
-            raise ValueError("")
+            raise ValueError("Search query can't be empty.")
         elif not isinstance(search_query, str):
-            raise ValueError("")
-
+            raise ValueError(
+                f'Search query must be type "str", not "{_type(search_query)}"'
+            )
         quoted_search_query = quote_plus(search_query)
-        params = {"q": quoted_search_query, "oq": quoted_search_query}
+        params = {"q": quoted_search_query, "oq": quoted_search_query, "gbv": "2"}
         tbs = ",".join(q.value for q in (size, color, type, time, usage_rights) if q)
-        search_info = SearchInfo(search_query=search_query, tbs=tbs, params=params)
+        search_info = SearchInfo(
+            search_query=search_query, safe_search=safe_search, tbs=tbs, params=params
+        )
         return self._generator(search_info)
+
+    async def _switch_safe_search(self, info: SearchInfo):
+        response = await self._make_request(
+            "GET", "https://www.google.com/safesearch", params={"gbv": "1"}
+        )
+        content = await response.text()
+        soup = BeautifulSoup(content, "lxml")
+        sig = soup.select_one("input[name='sig']")["value"]
+        response = await self._make_request(
+            "GET",
+            f"https://www.google.com/setprefs",
+            params={
+                "authuser": "",
+                "sig": sig,
+                "noredirect": "1",
+                "safeui": info.safe_search.value,
+            },
+        )
+        if response.status == 204:
+            return True
+        return False
 
     async def _generator(self, search_info: SearchInfo) -> AsyncGenerator[Batch, None]:
         await self._get_params(search_info)
-        # tbs = search_params.get("tbs", None)
+        await self._switch_safe_search(search_info)
         response = await self._make_request(
             "GET", URL.SEARCH, params=search_info.params
         )
@@ -85,6 +114,7 @@ class ImageDownloader:
         self,
         search_query: str,
         path: Path | str | None = None,
+        safe_search: SafeSearch = SafeSearch.FILTER,
         max_images: int | None = None,
         size: Size | None = None,
         color: Color | None = None,
@@ -113,10 +143,12 @@ class ImageDownloader:
         ) as progress:
             task = progress.add_task(description="Fetching images...", total=None)
             async for batch in self.search(
-                search_query, size, color, type, time, usage_rights
+                search_query, safe_search, size, color, type, time, usage_rights
             ):
                 results += batch.results
-                progress.update(task, description=f"Fetching images... {len(results)} fetched.")
+                progress.update(
+                    task, description=f"Fetching images... {len(results)} fetched."
+                )
                 if max_images != -1 and len(results) > max_images:
                     break
         results = results[:max_images] if len(results) > max_images else results
@@ -128,63 +160,14 @@ class ImageDownloader:
             new_size,
             new_format,
             maintain_aspect_ratio,
+            safe_search==SafeSearch.BLUR
         )
         downloader_task = loop.create_task(downloader.download())
         with Progress() as progress:
             task = progress.add_task("[green]Downloading...", total=len(results))
             while not downloader_task.done():
                 await asyncio.sleep(0.1)
-                progress.update(task, completed=downloader.downloaded)
-        # IMAGE_NUM = 0
-        # tasks: list[asyncio.Task] = []
-        # loop = asyncio.get_event_loop()
-        # queue = asyncio.Queue()
-        # if not path:
-        #     path = Path().joinpath(f"./images/{search_query}/")
-        # elif isinstance(path, str):
-        #     path = Path(path)
-        # path.mkdir(parents=True, exist_ok=True)
-        # if not number_of_downloaders or number_of_downloaders < 0:
-        #     number_of_downloaders = 10
-        # for _ in range(number_of_downloaders):
-        #     tasks.append(
-        #         loop.create_task(self._downloader(queue, path, new_size, new_format))
-        #     )
-        # async for batch in self.search(
-        #     search_query, size, color, type, time, usage_rights
-        # ):
-        #     for result in batch.results:
-        #         if max_images and max_images != -1 and IMAGE_NUM >= max_images:
-        #             break
-        #         await queue.put((result.image, str(IMAGE_NUM)))
-        #         IMAGE_NUM += 1
-        #     if max_images and max_images != -1 and IMAGE_NUM >= max_images:
-        #         break
-        # await queue.join()
-        # for task in tasks:
-        #     task.cancel()
-
-    async def _downloader(
-        self,
-        queue: asyncio.Queue,
-        path: Path,
-        new_size: Tuple[int, int] | None = None,
-        new_format: str | None = None,
-    ):
-        while True:
-            result, filename = await queue.get()
-            result: Result = result
-            content, format = await result.image.download(new_size, new_format)
-            if content is None:
-                content, format = await result.preview.download(new_size, new_format)
-                if content is None:
-                    queue.task_done()
-                    continue
-            async with aiofiles.open(
-                f"{path.absolute()}/{filename}.{format}", "wb"
-            ) as file:
-                await file.write(content)
-            queue.task_done()
+                progress.update(task, completed=downloader.done)
 
     def _parse_AF_initDataCallback(self, AF_initDataCallback: dict, info: SearchInfo):
         if len(AF_initDataCallback[56]) < 2:
@@ -211,15 +194,32 @@ class ImageDownloader:
             if result[0][0]["444383007"][1] is None:
                 continue
             result = result[0][0]["444383007"][1]
-            preview = {
-                "url": result[2][0],
-                "width": int(result[2][2]),
-                "height": int(result[2][1]),
-            }
+            if isinstance(result[21], dict):
+                preview = {
+                    "url": result[21][0],
+                    "width": int(result[21][2]),
+                    "height": int(result[21][1]),
+                    "preview": True
+                }
+                blurred = {
+                    "url": result[2][0],
+                    "width": int(result[2][2]),
+                    "height": int(result[2][1]),
+                    "preview": True
+                }
+            else:
+                preview = {
+                    "url": result[2][0],
+                    "width": int(result[2][2]),
+                    "height": int(result[2][1]),
+                    "preview": True
+                }
+                blurred = None
             image = {
                 "url": result[3][0],
                 "width": int(result[3][2]),
                 "height": int(result[3][1]),
+                "preview": False
             }
             website = {
                 "url": result[25]["2003"][2],
@@ -227,10 +227,10 @@ class ImageDownloader:
                 "title": result[25]["2003"][3],
                 "name": result[25]["2003"][12],
             }
-            results.append({"preview": preview, "image": image, "website": website})
+            results.append({"preview": preview, "image": image, "website": website, "blurred": blurred})
         return results
 
-    def _parse_page(self, content: str, info: SearchInfo) -> Batch:
+    def _parse_page(self, content: str | bytes, info: SearchInfo) -> Batch | None:
         batch = None
         soup = BeautifulSoup(content, "lxml")
         for script in soup.select("script"):
@@ -292,17 +292,23 @@ class ImageDownloader:
                 ]
             ]
         )
-        info.batchexecute_post = {"f.req": f_req + "&"}
+        info.batchexecute_post = {"f.req": f_req, "": ""}
         info.page_num = info.grid_state[0]
 
     def _generate_batchexecute_params(self, info: SearchInfo):
         now = datetime.now()
+        if os.name == "nt":
+            hl = (
+                locale.windows_locale[ctypes.windll.kernel32.GetUserDefaultUILanguage()]
+            ).replace("_", "-")
+        else:
+            hl = os.getenv("LANG", "en_US").split(".")[0].replace("_", "-")
         info.batchexecute_params = {
             "rpcids": info.rpcids,
             "source-path": "/search",
             "f.sid": info.f_sid,
             "bl": info.bl,
-            "hl": "en-US",  # Get user language?
+            "hl": hl,
             "authuser": "",
             "soc-app": "162",
             "soc-platform": "1",
@@ -347,23 +353,24 @@ class ImageDownloader:
         if not self.session:
             self.session = aiohttp.ClientSession()
         response = await self.session.request(
-            method, url, headers=self.headers, params=params
+            method,
+            url,
+            headers=self.headers,
+            params=params,
         )
         return response
 
 
 if __name__ == "__main__":
-
     async def main():
         try:
             google = ImageDownloader()
-            # async for query in downloader.search("Hello world"):
-                # print(len(query.results))
-            await google.download("Hello world", "./images", 100)
+            #await google.download()
         except Exception:
             console.print_exception(show_locals=False)
         finally:
-            await google.session.close()
+            if google.session:
+                await google.session.close()
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

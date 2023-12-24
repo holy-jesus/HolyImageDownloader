@@ -1,9 +1,15 @@
 from dataclasses import dataclass
 
+try:
+    from ENUMS import SafeSearch
+except ImportError:
+    from .ENUMS import SafeSearch
+
 
 @dataclass
 class SearchInfo:
     search_query: str = None
+    safe_search: SafeSearch = SafeSearch.FILTER
     tbs: str = None
     params: dict = None
     rpcids: str = None

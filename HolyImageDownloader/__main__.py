@@ -61,7 +61,7 @@ def download(
             task = progress.add_task("[green]Downloading...", total=len(results))
             while not downloader_task.done():
                 await asyncio.sleep(0.25)
-                progress.update(task, completed=downloader.downloaded)
+                progress.update(task, completed=downloader.done)
         await google.session.close()
 
     loop = asyncio.new_event_loop()

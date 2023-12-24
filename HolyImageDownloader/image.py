@@ -3,6 +3,7 @@
 class Image:
     def __init__(self, json: list) -> None:
         self.url: str = json["url"]
+        self.preview = json["preview"]
         self.width: int = json["width"]
         self.height: int = json["height"]
         self.size: tuple[int, int] = (json["width"], json["height"])
