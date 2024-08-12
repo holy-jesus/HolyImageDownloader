@@ -1,4 +1,4 @@
-My notes will be here, I won’t translate them into English because I don’t see the point in this, they are intended only for me, but if you really want to read, then https://translate.google.com/ will help.
+My notes will be here, I won’t translate them into English because I don’t see the point in this, they are intended only for me, but if you really want to read, then https://deepl.com/ will help.
 
 Здесь будут мои заметки, они предназначены только для меня, но если сильно хочется почитать, то добро пожаловать.
 
