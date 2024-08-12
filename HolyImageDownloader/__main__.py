@@ -25,7 +25,9 @@ def download(
         ),
     ] = "./images/",
     limit: Annotated[int, typer.Option(help="Number of images to download")] = -1,
-    downloaders: Annotated[int, typer.Option(help="Number of concurrent downloads")] = 50,
+    downloaders: Annotated[
+        int, typer.Option(help="Number of concurrent downloads")
+    ] = 50,
     # maintain_aspect_ration: Annotated[bool, typer.Option(help="Maintain same aspect ratio as original image")] = False,
 ):
     if path.is_file():
@@ -39,6 +41,7 @@ def download(
         query = typer.prompt("Search query")
     path = path.joinpath(query.replace(" ", "_").lower() + "/")
     path.mkdir(parents=True, exist_ok=True)
+
     async def run():
         loop = asyncio.get_event_loop()
         google = ImageDownloader()
@@ -51,11 +54,15 @@ def download(
             task = progress.add_task(description="Fetching images...", total=None)
             async for batch in google.search(query):
                 results += batch.results
-                progress.update(task, description=f"Fetching images... {len(results)} fetched.")
+                progress.update(
+                    task, description=f"Fetching images... {len(results)} fetched."
+                )
                 if limit != -1 and len(results) > limit:
                     break
         results = results[:limit] if len(results) > limit else results
-        downloader = Downloader(results, path, google.session, downloaders, maintain_aspect_ratio=False)
+        downloader = Downloader(
+            results, path, google.session, downloaders, maintain_aspect_ratio=False
+        )
         downloader_task = loop.create_task(downloader.download())
         with Progress() as progress:
             task = progress.add_task("[green]Downloading...", total=len(results))
