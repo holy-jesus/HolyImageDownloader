@@ -20,14 +20,16 @@ from rich.console import Console
 try:
     from searchinfo import SearchInfo
     from batch import Batch
-    from result import Result
+
+    # from result import Result
     from ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
     from config import HEADERS, URL
     from downloader import Downloader
 except ModuleNotFoundError:
     from .searchinfo import SearchInfo
     from .batch import Batch
-    from .result import Result
+
+    # from .result import Result
     from .ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
     from .config import HEADERS, URL
     from .downloader import Downloader
@@ -70,22 +72,17 @@ class ImageDownloader:
         return self._generator(search_info)
 
     async def _switch_safe_search(self, info: SearchInfo):
-        response = await self._make_request(
-            "GET", "https://www.google.com/safesearch", params={"gbv": "1"}
-        )
+        response = await self._make_request("GET", "https://www.google.com/safesearch")
         content = await response.text()
         soup = BeautifulSoup(content, "lxml")
-        sig = soup.select_one("input[name='sig']")["value"]
-        response = await self._make_request(
-            "GET",
-            f"https://www.google.com/setprefs",
-            params={
-                "authuser": "",
-                "sig": sig,
-                "noredirect": "1",
-                "safeui": info.safe_search.value,
-            },
-        )
+        attribute = {
+            SafeSearch.FILTER: "data-setprefs-filter-url",
+            SafeSearch.BLUR: "data-setprefs-blur-url",
+            SafeSearch.OFF: "data-setprefs-off-url",
+        }[info.safe_search]
+        element = soup.find(attrs={attribute: True})
+        url = "https://www.google.com" + element[attribute]
+        response = await self._make_request("GET", url)
         if response.status == 204:
             return True
         return False
@@ -160,7 +157,7 @@ class ImageDownloader:
             new_size,
             new_format,
             maintain_aspect_ratio,
-            safe_search==SafeSearch.BLUR
+            safe_search == SafeSearch.BLUR,
         )
         downloader_task = loop.create_task(downloader.download())
         with Progress() as progress:
@@ -199,27 +196,27 @@ class ImageDownloader:
                     "url": result[21][0],
                     "width": int(result[21][2]),
                     "height": int(result[21][1]),
-                    "preview": True
+                    "preview": True,
                 }
                 blurred = {
                     "url": result[2][0],
                     "width": int(result[2][2]),
                     "height": int(result[2][1]),
-                    "preview": True
+                    "preview": True,
                 }
             else:
                 preview = {
                     "url": result[2][0],
                     "width": int(result[2][2]),
                     "height": int(result[2][1]),
-                    "preview": True
+                    "preview": True,
                 }
                 blurred = None
             image = {
                 "url": result[3][0],
                 "width": int(result[3][2]),
                 "height": int(result[3][1]),
-                "preview": False
+                "preview": False,
             }
             website = {
                 "url": result[25]["2003"][2],
@@ -227,7 +224,14 @@ class ImageDownloader:
                 "title": result[25]["2003"][3],
                 "name": result[25]["2003"][12],
             }
-            results.append({"preview": preview, "image": image, "website": website, "blurred": blurred})
+            results.append(
+                {
+                    "preview": preview,
+                    "image": image,
+                    "website": website,
+                    "blurred": blurred,
+                }
+            )
         return results
 
     def _parse_page(self, content: str | bytes, info: SearchInfo) -> Batch | None:
@@ -362,10 +366,10 @@ class ImageDownloader:
 
 
 if __name__ == "__main__":
+
     async def main():
         try:
             google = ImageDownloader()
-            #await google.download()
         except Exception:
             console.print_exception(show_locals=False)
         finally:
