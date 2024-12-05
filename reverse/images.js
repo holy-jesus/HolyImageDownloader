@@ -80,7 +80,7 @@ this._s = this._s || {};
       d,
       {
         context: context = new Map(),
-        We: f = new Map(),
+        We: body = new Map(),
         xy: g,
         U2a: targetType,
         RCa: k,
@@ -95,14 +95,14 @@ this._s = this._s || {};
       context.has("_fmt") || context.set("_fmt", "prog");
       t && context.set("_id", t);
       (t = vpc.u6) && context.set("_xsrf", t);
-      f = new Map(f);
-      targetType && f.set("ddii", "1");
+      body = new Map(body);
+      targetType && body.set("ddii", "1");
       targetType = vpc.DH;
       t = vpc.tGa;
       method = vpc.PYa;
       b = lJb(
         targetType,
-        f,
+        body,
         t,
         (d == null ? void 0 : d.Ybb) || "",
         (d == null ? void 0 : d.gmd) || "",
@@ -118,11 +118,11 @@ this._s = this._s || {};
       c = mJb(targetType, t);
       d = _.gJb(b);
       r = _.kJb(method, d, c, b, context);
-      f = _.formBody(method, targetType, context);
+      body = _.formBody(method, targetType, context);
       return {
         method: method,
         url: r,
-        gAc: f,
+        gAc: body,
         hostname: d,
         path: c,
         We: b,
