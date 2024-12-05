@@ -40,7 +40,23 @@
 
 Функцию `getNextImages` вызывает функция `NMb`
 
+WIZ парсится в файле parsing.js на строчке ~47780
+
 После запроса всё идёт к строчке 1215;
+
+##### Заголовки
+
+WIZ - заголовок
+
+- `ejMLCd` - `X-Geo`
+- `PYFuDc` - `X-Client-Data`
+- `JHHKub` - `X-Client-Pctx`
+- `qfI0Zc` - `X-Search-Ci-Fi`
+- `AUf7qc` - `X-Silk-Capabilities`
+
+##### Всякое важное
+
+\_xjs_toggles
 
 ## Инструменты, которые я использую
 
