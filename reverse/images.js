@@ -17,18 +17,18 @@ this._s = this._s || {};
     _._DumpException(e);
   }
   try {
-    _.iJb = function () {
+    _.getHeadersFromWIZ = function () {
       const a = new Map();
-      var b = _.Mc("ejMLCd");
-      b.Ib() && a.set("X-Geo", _.Fl(b));
-      b = _.Mc("PYFuDc");
-      b.Ib() && a.set("X-Client-Data", _.Fl(b));
-      b = _.Mc("JHHKub");
-      b.Ib() && a.set("X-Client-Pctx", _.Fl(b));
-      b = _.Mc("qfI0Zc");
-      b.Ib() && a.set("X-Search-Ci-Fi", _.Fl(b));
-      b = _.Mc("AUf7qc");
-      b.Ib() && a.set("X-Silk-Capabilities", _.Fl(b));
+      var value = _.getValueFromWIZ("ejMLCd");
+      value.hasValue() && a.set("X-Geo", _.getStringFromValue(value));
+      value = _.getValueFromWIZ("PYFuDc");
+      value.hasValue() && a.set("X-Client-Data", _.getStringFromValue(value));
+      value = _.getValueFromWIZ("JHHKub");
+      value.hasValue() && a.set("X-Client-Pctx", _.getStringFromValue(value));
+      value = _.getValueFromWIZ("qfI0Zc");
+      value.hasValue() && a.set("X-Search-Ci-Fi", _.getStringFromValue(value));
+      value = _.getValueFromWIZ("AUf7qc");
+      value.hasValue() && a.set("X-Silk-Capabilities", _.getStringFromValue(value));
       return a;
     };
   } catch (e) {
@@ -74,7 +74,7 @@ this._s = this._s || {};
       return a;
     };
     _.pJb = function (
-      method,
+      vpc,
       b,
       c,
       d,
@@ -89,17 +89,17 @@ this._s = this._s || {};
         B8a: r,
       },
       t,
-      x = !1
+      x = false
     ) {
       context = new Map([...context]);
       context.has("_fmt") || context.set("_fmt", "prog");
       t && context.set("_id", t);
-      (t = method.u6) && context.set("_xsrf", t);
+      (t = vpc.u6) && context.set("_xsrf", t);
       f = new Map(f);
       targetType && f.set("ddii", "1");
-      targetType = method.DH;
-      t = method.tGa;
-      method = method.PYa;
+      targetType = vpc.DH;
+      t = vpc.tGa;
+      method = vpc.PYa;
       b = lJb(
         targetType,
         f,
@@ -213,7 +213,7 @@ this._s = this._s || {};
       return x;
     };
     _.getHeaders = function () {
-      const a = _.iJb();
+      const a = _.getHeadersFromWIZ();
       BJb && a.set("X-DoS-Behavior", "Embed");
       return a;
     };
@@ -10640,12 +10640,12 @@ this._s = this._s || {};
   try {
     _.Tz = function () {
       if (window.google && window.google.kHL) return google.kHL;
-      const a = _.Mc("GWsdKe");
-      return a.Ib() ? a.string("") : "";
+      const a = _.getValueFromWIZ("GWsdKe");
+      return a.hasValue() ? a.string("") : "";
     };
     _.Sz = function () {
-      const a = _.Mc("GWsdKe");
-      return a.Ib() ? a.string("").split("-", 2)[1] || "" : "";
+      const a = _.getValueFromWIZ("GWsdKe");
+      return a.hasValue() ? a.string("").split("-", 2)[1] || "" : "";
     };
     _.rhd = _.Re.bC;
   } catch (e) {
@@ -13836,7 +13836,7 @@ this._s = this._s || {};
     $id = function () {
       let a;
       try {
-        a = _.Jl(_.Mc("QrtxK")).toString();
+        a = _.Jl(_.getValueFromWIZ("QrtxK")).toString();
       } catch (b) {
         a = "0";
       }
@@ -14239,7 +14239,7 @@ this._s = this._s || {};
       ).Cv(a.getViewerType() || 0);
       a.Nb() && d.Sa(_.lj(a, 9));
       a = _.Yz(b, "fbmain");
-      a.Ib() &&
+      a.hasValue() &&
         ((a = rmc(_.$Aa(_.El(a, "")))),
         _.Hf(a, 2) && d.Ca(_.Hf(a, 2)),
         a.Ty() && d.Da(a.Ty()),
@@ -14252,36 +14252,36 @@ this._s = this._s || {};
         _.Oi(a, 20) && _.vlc(d, _.Oi(a, 20)),
         a.getViewerType() && d.Cv(a.getViewerType()));
       a = _.Yz(b, "attrid");
-      a.Ib() && d.setAttribute(_.Dl(a));
+      a.hasValue() && d.setAttribute(_.Dl(a));
       a = _.Yz(b, "rentity");
-      a.Ib() && d.Jf(_.Dl(a));
+      a.hasValue() && d.Jf(_.Dl(a));
       a = _.Yz(b, "secids");
-      a.Ib() && d.mj(_.Dl(a));
+      a.hasValue() && d.mj(_.Dl(a));
       a = _.Yz(b, "docid");
-      a.Ib() && d.Qe(_.Dl(a));
+      a.hasValue() && d.Qe(_.Dl(a));
       a = _.Yz(b, "tsourceid");
-      a.Ib() && d.Tf(_.Il(a));
+      a.hasValue() && d.Tf(_.Il(a));
       a = _.Yz(b, "lpage");
-      a.Ib() && d.Af(_.Dl(a));
+      a.hasValue() && d.Af(_.Dl(a));
       a = _.Yz(b, "lyricid");
-      a.Ib() && d.Ze(_.Dl(a));
+      a.hasValue() && d.Ze(_.Dl(a));
       a = _.Yz(b, "entityid");
-      a.Ib() ? d.Ca(_.Dl(a)) : _.Sj(c, 2) ? d.Ca(_.Hf(c, 2)) : d.Ca("unknown");
+      a.hasValue() ? d.Ca(_.Dl(a)) : _.Sj(c, 2) ? d.Ca(_.Hf(c, 2)) : d.Ca("unknown");
       a = _.Yz(b, "entityname");
-      a.Ib()
+      a.hasValue()
         ? d.Da(_.Dl(a))
         : _.Sj(c, 3)
         ? d.Da(c.Ty())
         : d.Da("Unknown Entity");
-      _.Yz(b, "himg").Ib() && d.Ae(!0);
+      _.Yz(b, "himg").hasValue() && d.Ae(!0);
       c = _.Yz(b, "ftag");
-      c.Ib() && _.vlc(d, _.Il(c));
+      c.hasValue() && _.vlc(d, _.Il(c));
       c = _.Yz(b, "ftype");
-      c.Ib() && d.Aa(_.Il(c));
+      c.hasValue() && d.Aa(_.Il(c));
       c = _.Yz(b, "fpid");
-      c.Ib() && d.Qb(_.Il(c));
+      c.hasValue() && d.Qb(_.Il(c));
       c = _.Yz(b, "fbkt");
-      c.Ib() && d.Ob(_.Dl(c));
+      c.hasValue() && d.Ob(_.Dl(c));
       if ((c = _.El(_.Yz(b, "fbctx"), "")))
         (c = _.Jlc(c)),
           (c = (a = d.Ba()) ? smc(a, new _.vha(tmc(c))) : c),
@@ -14308,7 +14308,7 @@ this._s = this._s || {};
     };
     _.xmc = function (a, b) {
       let c;
-      return ((c = _.kmc(a)) == null ? void 0 : c.getData(b).Ib()) || !1;
+      return ((c = _.kmc(a)) == null ? void 0 : c.getData(b).hasValue()) || !1;
     };
     _.ymc = function (a) {
       return _.xmc(a, "kefbFhsOptin");
@@ -14418,7 +14418,7 @@ this._s = this._s || {};
           _.lj(a.model.getState(), 9) === _.lj(a.sE, 9)
         ) {
           var c = _.Yz(a.container, "ved");
-          if (!c.Ib()) {
+          if (!c.hasValue()) {
             var d = a.getRoot().closest(_.Vo("kp-wholepage-osrp")).first();
             d && (c = _.Yz(d, "ved"));
           }
@@ -14450,7 +14450,7 @@ this._s = this._s || {};
         constructor(a) {
           super(a.Oa);
           this.oa = null;
-          this.Ca = this.getData("fhs").Ib() || _.ymc(this.getRoot());
+          this.Ca = this.getData("fhs").hasValue() || _.ymc(this.getRoot());
           this.Aa = _.amc;
           this.nj = this.Ba = null;
           this.model = a.model.report;
@@ -14461,7 +14461,7 @@ this._s = this._s || {};
           this.Ja = this.Fa("TlHsMd");
           this.La = this.Fa("rP5Phe");
           this.Ga = this.Fa("yW3Mac");
-          this.getRoot().getData("ubs").Ib() &&
+          this.getRoot().getData("ubs").hasValue() &&
             _.Mg(this.container.find(".PZPZlf"), (b) => {
               b.addClass("PZPZlf");
             });
@@ -14551,7 +14551,7 @@ this._s = this._s || {};
           a.event.preventDefault();
           this.Wb.oa().oa(this.getRoot().el()).log(!0);
           this.oa = a = a.targetElement.closest(".PZPZlf");
-          this.getRoot().getData("epu").Ib() &&
+          this.getRoot().getData("epu").hasValue() &&
             a.each((c) => {
               (c.tagName === "IMG" || new _.Rg([c]).find("img").size() > 0) &&
                 c.setAttribute("ispicked", "");
@@ -14705,7 +14705,7 @@ this._s = this._s || {};
           if (!_.lj(b, 16) || !a.data.Aa() || _.lj(b, 16) === a.data.Aa()) {
             var c = _.Xhd(a.getRoot()),
               d = new _.Uz().Ba(_.Mi(a.data, 12)).Aa(_.Hf(a.data, 13));
-            _.ajd(a.Ina, b, d, c, (e) => Rjd(a, e), a.getData("eau").Ib()).then(
+            _.ajd(a.Ina, b, d, c, (e) => Rjd(a, e), a.getData("eau").hasValue()).then(
               () => {}
             );
           }
@@ -14779,7 +14779,7 @@ this._s = this._s || {};
         }
         const d = _.nj(c, 6) || 1,
           e = _.nj(c, 20) || 0;
-        b = a.getRoot().getData("cdoc").Ib() || _.pj(c, 26) ? "" : null;
+        b = a.getRoot().getData("cdoc").hasValue() || _.pj(c, 26) ? "" : null;
         a.getRoot().setData("cdoc", b);
         b = () => {
           var f;
@@ -14873,12 +14873,12 @@ this._s = this._s || {};
         constructor(a) {
           super(a.Oa);
           this.Ya = this.Wa("WKijSd").el();
-          this.Ma = this.getData("eas").Ib();
-          this.Ca = this.getData("fhs").Ib() || _.ymc(this.getRoot());
-          this.Xa = this.getData("sps").Ib();
+          this.Ma = this.getData("eas").hasValue();
+          this.Ca = this.getData("fhs").hasValue() || _.ymc(this.getRoot());
+          this.Xa = this.getData("sps").hasValue();
           this.Aa = 0;
           this.oa = void 0;
-          this.Ba = this.getData("dst").Ib();
+          this.Ba = this.getData("dst").hasValue();
           this.nF = !1;
           this.model = a.model.report;
           let b;
@@ -16408,7 +16408,7 @@ this._s = this._s || {};
             window.matchMedia("(prefers-reduced-motion: reduce)").matches)
             ? "1"
             : "0";
-        this.Aa = a.getData("prm").Ib() ? "1" : "0";
+        this.Aa = a.getData("prm").hasValue() ? "1" : "0";
       }
       L9c() {
         return ["prm23", this.oa];
