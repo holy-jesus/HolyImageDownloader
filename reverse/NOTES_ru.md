@@ -68,3 +68,4 @@ parsing.js `_xjs_toggles`
 - [Firefox](https://www.mozilla.org/ru/firefox/new/)
 - [Firefox Developer Tools](https://firefox-source-docs.mozilla.org/devtools-user/)
 - [Firefox JavaScript Debugger](https://firefox-source-docs.mozilla.org/devtools-user/debugger/)
+- [Анализатор HAR](https://toolbox.googleapps.com/apps/har_analyzer/)

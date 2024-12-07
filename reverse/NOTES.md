@@ -69,3 +69,4 @@ After the request, everything proceeds to line 1215.
 - [Firefox](https://www.mozilla.org/ru/firefox/new/)
 - [Firefox Developer Tools](https://firefox-source-docs.mozilla.org/devtools-user/)
 - [Firefox JavaScript Debugger](https://firefox-source-docs.mozilla.org/devtools-user/debugger/)
+- [HAR Analyzer](https://toolbox.googleapps.com/apps/har_analyzer/)
