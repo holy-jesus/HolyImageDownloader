@@ -1990,7 +1990,8 @@ this._s = this._s || {};
       b = Nda(a, b, c, d, h);
       e = Nda(a, e, f, g, h);
       r = r === 1;
-      if ((e == null && qca(b, k, a)) || (b == null && qca(e, k, a))) return true;
+      if ((e == null && qca(b, k, a)) || (b == null && qca(e, k, a)))
+        return true;
       n = r ? n : n == null ? void 0 : n.oa(a);
       if ((m = m == null ? void 0 : m.has(a))) {
         if (b == null && Array.isArray(e)) return e.length === 0;
@@ -2442,7 +2443,11 @@ this._s = this._s || {};
       let n = m || Object.isFrozen(c);
       m || (g = 0);
       n ||
-        ((c = db(c)), (h = 0), (g = Eea(g, f)), (g = Iea(g, f, true)), (n = false));
+        ((c = db(c)),
+        (h = 0),
+        (g = Eea(g, f)),
+        (g = Iea(g, f, true)),
+        (n = false));
       g |= 21;
       var r;
       m = (r = Zba(g)) != null ? r : 0;
@@ -4263,16 +4268,28 @@ this._s = this._s || {};
         _.ed(a, "jrwt", "1"));
       return false;
     };
-    _.hd = function (a) {
-      var b = Dka;
-      const c = _.fd(a),
-        d = ([, ...f]) => b(c, f),
-        e = ([f, ...g]) => a.apply(f, g);
-      return function (...f) {
-        const g = this || _.ea;
-        let h = Eka.get(g);
-        h || ((h = {}), Eka.set(g, h));
-        return Fka(h, [this, ...f], e, d);
+    _.cachedCallToFunction = function (func) {
+      // TLDR: Cache
+      // Basically, it's checking if call to function was already made with this arguments
+      // If so, then return cached value
+      // If not, then call function and save result to cache
+      const c = _.assignUniqueID(func),
+        callFunctionToUniqueString = ([, ...form]) => stringifyValue(c, form),
+        callFunction = ([form, ...g]) => func.apply(form, g);
+      return function (...form) {
+        // This is probably class instance or window or document, _.ea used as fallback
+        const classInstance = this || _.ea;
+        let isCached = cache.get(classInstance);
+        if (!isCached) {
+          isCached = {};
+          cache.set(classInstance, isCached);
+        }
+        return getFromCacheOrAssignValueToCache(
+          isCached,
+          [this, ...form],
+          callFunction,
+          callFunctionToUniqueString
+        );
       };
     };
     _.jd = function () {
@@ -4461,9 +4478,9 @@ this._s = this._s || {};
       return c;
     };
     _.bla = function (a) {
-      var b = _.Dd(a);
-      a = _.Ed(b, "k");
-      b = _.Ed(b, "cb");
+      var b = _.parseGoogleStaticURL(a);
+      a = _.getValueFromoaOrNull(b, "k");
+      b = _.getValueFromoaOrNull(b, "cb");
       return b
         ? (b = b.match(/loaded(_g|_h)?(_\d)+/))
           ? `${a}.${b[0]}`
@@ -4473,7 +4490,10 @@ this._s = this._s || {};
     _.Fd = function (a) {
       return _.Ad(a, 2);
     };
-    _.Ld = function (a, { uf: b = {}, Zu: c = 0, level: d, aJa: e = false } = {}) {
+    _.Ld = function (
+      a,
+      { uf: b = {}, Zu: c = 0, level: d, aJa: e = false } = {}
+    ) {
       if (!("function" == typeof _.ela && a instanceof _.ela)) {
         if (d === void 0 || e) _.fla(a) ? (d = 3) : _.gla(a) && (d = 2);
         d === void 0 && (d = 2);
@@ -5128,7 +5148,11 @@ this._s = this._s || {};
       });
       a.Wv(() => {});
     };
-    dna = function (a, b, { Jra: c = true, Ika: d = new Set(), source: e } = {}) {
+    dna = function (
+      a,
+      b,
+      { Jra: c = true, Ika: d = new Set(), source: e } = {}
+    ) {
       const { promise: f, resolve: g, reject: h } = _.ue(),
         k = (m) => {
           ana(f, g, h, a, b, d, e, m);
@@ -5921,7 +5945,7 @@ this._s = this._s || {};
       return b || a;
     };
     _.af = function (a, b) {
-      b.id || (b.id = "ow" + _.fd(b));
+      b.id || (b.id = "ow" + _.assignUniqueID(b));
       a.setAttribute("jsowner", b.id);
       a.__owner = b;
       var c = fpa(b);
@@ -5971,7 +5995,12 @@ this._s = this._s || {};
       return c[b.toString()];
     };
     _.mpa = function (a, b) {
-      return _.dpa(a, (c) => _.bf(c) && c.hasAttribute("jscontroller"), b, true);
+      return _.dpa(
+        a,
+        (c) => _.bf(c) && c.hasAttribute("jscontroller"),
+        b,
+        true
+      );
     };
     _.npa = function (a) {
       "__jsaction" in a && delete a.__jsaction;
@@ -6052,7 +6081,9 @@ this._s = this._s || {};
     _.tf = function (a, b, c, d, e) {
       a = _.upa(a, b);
       for (const f of a)
-        (a = e), d && ((a = a || {}), (a.__source = d)), _.qf(f, b, c, false, a);
+        (a = e),
+          d && ((a = a || {}), (a.__source = d)),
+          _.qf(f, b, c, false, a);
     };
     _.upa = function (a, b) {
       const c = [],
@@ -6396,7 +6427,7 @@ this._s = this._s || {};
         b = window._F_jsUrl;
       if (b)
         try {
-          iqa(_.Dd(b)).forEach((c) => {
+          iqa(_.parseGoogleStaticURL(b)).forEach((c) => {
             a.add(c);
           });
         } catch (c) {
@@ -6583,7 +6614,7 @@ this._s = this._s || {};
     };
     Hqa = function (a) {
       if (!ola(a)) return "";
-      const b = _.Dd(a);
+      const b = _.parseGoogleStaticURL(a);
       return a.replace(b.Aa, "/xjs/_/js/");
     };
     Iqa = function () {
@@ -6734,7 +6765,8 @@ this._s = this._s || {};
           e && k.then(() => e(a)),
           ara || (era = k),
           c && (d && k.then(Zqa), (ara = true)))
-        : (e && e(a), c && (bra(era, false, true), d && era.then(Zqa), (ara = true)));
+        : (e && e(a),
+          c && (bra(era, false, true), d && era.then(Zqa), (ara = true)));
     };
     _.gra = function (a, b = () => {}) {
       _.fra(a, true, true, false, b);
@@ -6751,7 +6783,8 @@ this._s = this._s || {};
     _.$f = function (a, b, c) {
       b = b.querySelectorAll('[jsname="' + c + '"]');
       c = [];
-      for (let d = 0; d < b.length; d++) _.mpa(b[d], false) === a && c.push(b[d]);
+      for (let d = 0; d < b.length; d++)
+        _.mpa(b[d], false) === a && c.push(b[d]);
       return c;
     };
     kra = function (a, b) {
@@ -7611,7 +7644,8 @@ this._s = this._s || {};
             },
           }).then((d) => {
             d = d.service.GUb;
-            for (let e of a.metadata.OOd) _.Ag(d.get(e.VL), false) && (c = e.pCa);
+            for (let e of a.metadata.OOd)
+              _.Ag(d.get(e.VL), false) && (c = e.pCa);
             return c;
           })
         : _.Me(c);
@@ -10403,7 +10437,7 @@ this._s = this._s || {};
       };
     window._DumpException = _._DumpException;
     google.c && google.tick("load", "xjses");
-    var Qza, Rza, Sza, Ph, Tza, Uza, Vza, Wza, Yza;
+    var Qza, Rza, Sza, Ph, Tza, uniqueID, Vza, Wza, Yza;
     Qza = Qza || {};
     _.ea = this || self;
     _.Ve = function (a, b, c) {
@@ -10461,13 +10495,14 @@ this._s = this._s || {};
       var b = typeof a;
       return (b == "object" && a != null) || b == "function";
     };
-    _.fd = function (a) {
+    _.assignUniqueID = function (element) {
       return (
-        (Object.prototype.hasOwnProperty.call(a, Uza) && a[Uza]) ||
-        (a[Uza] = ++Vza)
+        (Object.prototype.hasOwnProperty.call(element, uniqueID) &&
+          element[uniqueID]) ||
+        (element[uniqueID] = ++Vza)
       );
     };
-    Uza = "closure_uid_" + ((Math.random() * 1000000000) >>> 0);
+    uniqueID = "closure_uid_" + ((Math.random() * 1000000000) >>> 0);
     Vza = 0;
     Wza = function (a, b, c) {
       return a.call.apply(a.bind, arguments);
@@ -10855,9 +10890,21 @@ this._s = this._s || {};
       return a;
     };
     _.CAa[" "] = function () {};
-    var Fka = function (a, b, c, d) {
-      d = d ? d(b) : b;
-      return Object.prototype.hasOwnProperty.call(a, d) ? a[d] : (a[d] = c(b));
+    var getFromCacheOrAssignValueToCache = function (
+      value,
+      arguments,
+      func,
+      stringifyCallToFunction
+    ) {
+      stringifyCallToFunction = stringifyCallToFunction
+        ? stringifyCallToFunction(arguments)
+        : arguments;
+      return Object.prototype.hasOwnProperty.call(
+        value,
+        stringifyCallToFunction
+      )
+        ? value[stringifyCallToFunction]
+        : (value[stringifyCallToFunction] = func(arguments));
     };
     var IAa, TAa;
     _.DAa = function () {
@@ -10907,7 +10954,7 @@ this._s = this._s || {};
     _.SAa = QAa;
     TAa = {};
     _.UAa = function (a) {
-      return Fka(TAa, a, function () {
+      return getFromCacheOrAssignValueToCache(TAa, a, function () {
         return _.Raa(_.SAa, a) >= 0;
       });
     };
@@ -14281,14 +14328,16 @@ this._s = this._s || {};
         this.value = b;
       }
       string(a) {
-        if (this.value == null) return arguments.length == 0 && throwError(this), a;
+        if (this.value == null)
+          return arguments.length == 0 && throwError(this), a;
         if (typeof this.value === "string") return this.value;
         throw new TypeError(
           "ta`" + this.key + "`" + this.value + "`" + typeof this.value
         );
       }
       bool(a) {
-        if (this.value == null) return arguments.length == 0 && throwError(this), a;
+        if (this.value == null)
+          return arguments.length == 0 && throwError(this), a;
         if (typeof this.value === "boolean") return this.value;
         if (typeof this.value === "string") {
           const b = this.value.toLowerCase();
@@ -14300,7 +14349,8 @@ this._s = this._s || {};
         );
       }
       number(a) {
-        if (this.value == null) return arguments.length == 0 && throwError(this), a;
+        if (this.value == null)
+          return arguments.length == 0 && throwError(this), a;
         if (typeof this.value === "number") return this.value;
         if (typeof this.value === "string") {
           const b = Number(this.value);
@@ -17688,7 +17738,8 @@ this._s = this._s || {};
           a != 3 || b instanceof _.Md || sIa(this, b)));
     };
     var iIa = function (a, b, c, d) {
-        if (a instanceof _.hf) return nIa(a, hIa(b || _.cIa, c || null, d)), true;
+        if (a instanceof _.hf)
+          return nIa(a, hIa(b || _.cIa, c || null, d)), true;
         if (eIa(a)) return a.then(b, c, d), true;
         if (_.pe(a))
           try {
@@ -17728,7 +17779,8 @@ this._s = this._s || {};
       this.fjc = false;
     };
     qIa = function (a, b, c, d) {
-      if (c == 3 && b.Aa && !b.always) for (; a && a.NXb; a = a.Eu) a.NXb = false;
+      if (c == 3 && b.Aa && !b.always)
+        for (; a && a.NXb; a = a.Eu) a.NXb = false;
       if (b.oa) (b.oa.Eu = null), uIa(b, c, d);
       else
         try {
@@ -18482,7 +18534,8 @@ this._s = this._s || {};
         var b = a.Aa,
           c = b && b.Aa;
         c
-          ? ((b = b.get(c)), a.dispatchEvent(new UIa(c, b)) && a.setVisible(false))
+          ? ((b = b.get(c)),
+            a.dispatchEvent(new UIa(c, b)) && a.setVisible(false))
           : a.setVisible(false);
       }
     };
@@ -18710,7 +18763,7 @@ this._s = this._s || {};
     dJa = {};
     eJa = function (a) {
       return -128 <= a && a < 128
-        ? Fka(dJa, a, function (b) {
+        ? getFromCacheOrAssignValueToCache(dJa, a, function (b) {
             return new io([b | 0], b < 0 ? -1 : 0);
           })
         : new io([a | 0], a < 0 ? -1 : 0);
@@ -18763,7 +18816,8 @@ this._s = this._s || {};
     _.ba = io.prototype;
     _.ba.isZero = function () {
       if (this.Aa != 0) return false;
-      for (let a = 0; a < this.oa.length; a++) if (this.oa[a] != 0) return false;
+      for (let a = 0; a < this.oa.length; a++)
+        if (this.oa[a] != 0) return false;
       return true;
     };
     _.ba.A2 = function () {
@@ -19007,7 +19061,7 @@ this._s = this._s || {};
         if (!b.call(void 0, d[f], c && c[f], a)) return false;
       return true;
     };
-    var rJa, sJa, yJa, zJa, AJa, BJa, CJa, FJa, GJa, IJa;
+    var URLRegex, sJa, yJa, zJa, AJa, BJa, CJa, FJa, GJa, IJa;
     _.goa = function (a, b, c, d, e, f, g) {
       let h = "";
       a && (h += a + ":");
@@ -19017,17 +19071,17 @@ this._s = this._s || {};
       g && (h += "#" + g);
       return h;
     };
-    rJa = RegExp(
+    URLRegex = RegExp(
       "^(?:([^:/?#.]+):)?(?://(?:([^\\\\/?#]*)@)?([^\\\\/?#]*?)(?::([0-9]+))?(?=[\\\\/?#]|$))?([^?#]+)?(?:\\?([^#]*))?(?:#([\\s\\S]*))?$"
     );
-    _.ko = function (a) {
-      return a.match(rJa);
+    _.parseURLUsingRegex = function (URLString) {
+      return URLString.match(URLRegex);
     };
     sJa = function (a, b) {
       return a ? (b ? decodeURI(a) : decodeURIComponent(a)) : a;
     };
     _.we = function (a, b) {
-      return _.ko(b)[a] || null;
+      return _.parseURLUsingRegex(b)[a] || null;
     };
     _.tJa = function (a) {
       a = _.we(1, a);
@@ -19054,15 +19108,15 @@ this._s = this._s || {};
       return sJa(_.Oma(a));
     };
     _.wJa = function (a) {
-      a = _.ko(a);
+      a = _.parseURLUsingRegex(a);
       return _.goa(a[1], a[2], a[3], a[4]);
     };
     _.no = function (a) {
-      a = _.ko(a);
+      a = _.parseURLUsingRegex(a);
       return _.goa(a[1], null, a[3], a[4]);
     };
     _.le = function (a) {
-      a = _.ko(a);
+      a = _.parseURLUsingRegex(a);
       return _.goa(null, null, null, null, a[5], a[6], a[7]);
     };
     _.uJa = function (a) {
@@ -19195,7 +19249,7 @@ this._s = this._s || {};
     };
     _.KJa = function (a, b) {
       _.ng(b, "/") || (b = "/" + b);
-      a = _.ko(a);
+      a = _.parseURLUsingRegex(a);
       return _.goa(a[1], a[2], a[3], a[4], b, a[6], a[7]);
     };
     var MJa, YJa, NJa, PJa, OJa, SJa, QJa;
@@ -19214,7 +19268,7 @@ this._s = this._s || {};
           this.setPath(a.getPath()),
           _.vo(this, a.oa.clone()),
           _.wo(this, a.Ba))
-        : a && (c = _.ko(String(a)))
+        : a && (c = _.parseURLUsingRegex(String(a)))
         ? ((this.Ga = !!b),
           _.so(this, c[1] || "", true),
           (this.Ea = _.LJa(c[2] || "")),
@@ -19684,8 +19738,8 @@ this._s = this._s || {};
         this.visibilityState = b;
       }
     };
-    var Eka = new WeakMap(),
-      Dka = function (a, b) {
+    var cache = new WeakMap(),
+      stringifyValue = function (a, b) {
         a = [a];
         for (let c = b.length - 1; c >= 0; --c) a.push(typeof b[c], b[c]);
         return a.join("\v");
@@ -19702,7 +19756,7 @@ this._s = this._s || {};
     };
     _.Yh(_.Hka, _.Ln);
     _.ba = _.Hka.prototype;
-    _.ba.pRd = _.hd(function () {
+    _.ba.pRd = _.cachedCallToFunction(function () {
       var a = this.isSupported();
       const b = this.Zlc() != "hidden";
       if (a) {
@@ -19714,10 +19768,10 @@ this._s = this._s || {};
       } else a = null;
       return a;
     });
-    _.ba.Zlc = _.hd(function () {
+    _.ba.Zlc = _.cachedCallToFunction(function () {
       return pGa("hidden", this.oa.getDocument());
     });
-    _.ba.dUd = _.hd(function () {
+    _.ba.dUd = _.cachedCallToFunction(function () {
       return pGa("visibilityState", this.oa.getDocument());
     });
     _.ba.isSupported = function () {
@@ -20026,7 +20080,7 @@ this._s = this._s || {};
     };
     _.md = class {
       constructor(a, { Hhd: b = _.Do } = {}) {
-        a = a === "" ? [] : _.ko(a);
+        a = a === "" ? [] : _.parseURLUsingRegex(a);
         var c = a[1] || "";
         this.protocol = c + (c ? ":" : "");
         c = (a[2] || "").split(":");
@@ -20234,11 +20288,11 @@ this._s = this._s || {};
           return this.segments[1];
         }
       };
-    var MKa,
+    var removeUberProxyURL,
       QKa,
       SKa,
       ola,
-      PKa,
+      setNewValueToAa,
       VKa,
       TKa,
       UKa,
@@ -20252,43 +20306,50 @@ this._s = this._s || {};
       OKa,
       cLa,
       RKa;
-    _.Dd = function (a) {
-      var b = MKa(a);
-      const c = new NKa(),
-        d = _.ko(b)[5];
-      _.ec(OKa, function (f) {
-        const g = d.match("/" + f + "=([^/]+)");
-        g && _.Ko(c, f, g[1]);
+    _.parseGoogleStaticURL = function (URLString) {
+      var URLWithoutUberProxy = removeUberProxyURL(URLString);
+      const URLInstance = new NKa();
+      const path = _.parseURLUsingRegex(URLWithoutUberProxy)[5];
+      // This function goes through all values in the OKa list, checks for their presence in the file path
+      // and if so, assigns the value to object oa
+      _.ec(OKa, function (key) {
+        const g = path.match("/" + key + "=([^/]+)");
+        g && _.setValueTooaOrDelete(URLInstance, key, g[1]);
       });
-      var e = "";
-      e =
-        a.indexOf("_/ss/") != -1
+      var fileTypeFromURL = "";
+      fileTypeFromURL =
+        URLString.indexOf("_/ss/") != -1
           ? "_/ss/"
-          : a.indexOf("_/wa/") != -1
+          : URLString.indexOf("_/wa/") != -1
           ? "_/wa/"
-          : a.indexOf("_/r/") != -1
+          : URLString.indexOf("_/r/") != -1
           ? "_/r/"
           : "_/js/";
-      PKa(c, a.substr(0, a.indexOf(e) + e.length));
-      if (c.Aa.endsWith("_/wa/")) {
-        b = QKa(a);
+      // Assigns to URLInstance.Aa from start to part _/*/ 
+      setNewValueToAa(URLInstance, URLString.substr(0, URLString.indexOf(fileTypeFromURL) + fileTypeFromURL.length));
+      if (URLInstance.Aa.endsWith("_/wa/")) {
+        URLWithoutUberProxy = QKa(URLString);
         let f = true;
         Object.values(RKa).forEach((g) => {
-          a.endsWith(g) && ((c.Ca = g), (f = false));
+          URLString.endsWith(g) && ((URLInstance.Ca = g), (f = false));
         });
-        f && ((e = a.split("/")), (c.Ca = "/" + e[e.length - 1]));
-        _.Ko(c, "wk", b.toString());
-        return c;
+        f && ((fileTypeFromURL = URLString.split("/")), (URLInstance.Ca = "/" + fileTypeFromURL[fileTypeFromURL.length - 1]));
+        _.setValueTooaOrDelete(URLInstance, "wk", URLWithoutUberProxy.toString());
+        return URLInstance;
       }
-      if (c.Aa.endsWith("_/r/"))
-        return (b = SKa(a)), _.Ko(c, "sc", b.toString()), c;
-      (b = _.we(6, b)) &&
-        _.xJa(b, (f, g) => {
-          c.Ba[f] = g;
+      if (URLInstance.Aa.endsWith("_/r/"))
+        return (
+          (URLWithoutUberProxy = SKa(URLString)),
+          _.setValueTooaOrDelete(URLInstance, "sc", URLWithoutUberProxy.toString()),
+          URLInstance
+        );
+      (URLWithoutUberProxy = _.we(6, URLWithoutUberProxy)) &&
+        _.xJa(URLWithoutUberProxy, (f, g) => {
+          URLInstance.Ba[f] = g;
         });
-      return c;
+      return URLInstance;
     };
-    MKa = function (a) {
+    removeUberProxyURL = function (a) {
       return a.startsWith(
         "https://uberproxy-pen-redirect.corp.google.com/uberproxy/pen?url="
       )
@@ -20325,7 +20386,7 @@ this._s = this._s || {};
       }
     };
     ola = function (a) {
-      const b = _.gna(MKa(a));
+      const b = _.gna(removeUberProxyURL(a));
       return b === null
         ? false
         : RegExp("/_/wa/", "g").test(b)
@@ -20336,10 +20397,10 @@ this._s = this._s || {};
         ? /\/k=/.test(b)
         : false;
     };
-    _.Ko = function (a, b, c) {
-      c ? (a.oa[b] = c) : delete a.oa[b];
+    _.setValueTooaOrDelete = function (obj, key, value) {
+      value ? (obj.oa[key] = value) : delete obj.oa[key];
     };
-    PKa = function (a, b) {
+    setNewValueToAa = function (a, b) {
       a.Aa = b;
     };
     VKa = function (a) {
@@ -20360,7 +20421,7 @@ this._s = this._s || {};
           c("ck"),
           c("am"),
           c("rt"),
-          "d" in a.oa || _.Ko(a, "d", "0"),
+          "d" in a.oa || _.setValueTooaOrDelete(a, "d", "0"),
           c("d"),
           c("exm"),
           c("excm"),
@@ -20368,10 +20429,10 @@ this._s = this._s || {};
           c("im"),
           c("dg"),
           c("sm"),
-          _.Ed(a, "br") == "1" && c("br"),
+          _.getValueFromoaOrNull(a, "br") == "1" && c("br"),
           c("br-d"),
-          _.Ed(a, "rb") == "1" && c("rb"),
-          _.Ed(a, "zs") !== "0" && c("zs"),
+          _.getValueFromoaOrNull(a, "rb") == "1" && c("rb"),
+          _.getValueFromoaOrNull(a, "zs") !== "0" && c("zs"),
           UKa(a) !== "" && c("wt"),
           c("gssmodulesetproto"),
           c("ujg"),
@@ -20383,15 +20444,15 @@ this._s = this._s || {};
           c("m"));
       return b.join("/");
     };
-    _.Ed = function (a, b) {
+    _.getValueFromoaOrNull = function (a, b) {
       return a.oa[b] ? a.oa[b] : null;
     };
     TKa = function (a) {
-      a = _.Ed(a, "md");
+      a = _.getValueFromoaOrNull(a, "md");
       return !!a && a !== "0";
     };
     UKa = function (a) {
-      switch (_.Ed(a, "wt")) {
+      switch (_.getValueFromoaOrNull(a, "wt")) {
         case "0":
           return "0";
         case "1":
@@ -20404,25 +20465,25 @@ this._s = this._s || {};
     };
     WKa = function (a, b) {
       b && b.length > 0
-        ? (b.sort(), _.Ko(a, "exm", b.join(",")))
-        : _.Ko(a, "exm", null);
+        ? (b.sort(), _.setValueTooaOrDelete(a, "exm", b.join(",")))
+        : _.setValueTooaOrDelete(a, "exm", null);
     };
     XKa = function (a) {
-      return (a = _.Ed(a, "exm")) ? a.split(",") : [];
+      return (a = _.getValueFromoaOrNull(a, "exm")) ? a.split(",") : [];
     };
     YKa = function (a, b) {
       b && b.length > 0
-        ? (b.sort(), _.Ko(a, "excm", b.join(",")))
-        : _.Ko(a, "excm", null);
+        ? (b.sort(), _.setValueTooaOrDelete(a, "excm", b.join(",")))
+        : _.setValueTooaOrDelete(a, "excm", null);
     };
     iqa = function (a) {
-      return (a = _.Ed(a, "excm")) ? a.split(",") : [];
+      return (a = _.getValueFromoaOrNull(a, "excm")) ? a.split(",") : [];
     };
     _.ZKa = function (a) {
-      return (a = _.Ed(a, "m")) ? a.split(",") : [];
+      return (a = _.getValueFromoaOrNull(a, "m")) ? a.split(",") : [];
     };
     $Ka = function (a) {
-      switch (_.Ed(a, "dg")) {
+      switch (_.getValueFromoaOrNull(a, "dg")) {
         case "0":
           return "0";
         case "2":
@@ -20442,10 +20503,10 @@ this._s = this._s || {};
           return d + ":" + e.join(",");
         });
       c.sort();
-      _.Ko(a, "ee", c.join(";"));
+      _.setValueTooaOrDelete(a, "ee", c.join(";"));
     };
     bLa = function (a) {
-      var b = _.Ed(a, "ee");
+      var b = _.getValueFromoaOrNull(a, "ee");
       if (!b) return {};
       a = {};
       b = b.split(";");
@@ -20465,8 +20526,8 @@ this._s = this._s || {};
       }
       toString() {
         if (this.Aa.endsWith("_/wa/"))
-          var a = `${this.Aa}${_.Ed(this, "wk")}${this.Ca}`;
-        else if (this.Aa.endsWith("_/r/")) a = `${this.Aa}${_.Ed(this, "sc")}`;
+          var a = `${this.Aa}${_.getValueFromoaOrNull(this, "wk")}${this.Ca}`;
+        else if (this.Aa.endsWith("_/r/")) a = `${this.Aa}${_.getValueFromoaOrNull(this, "sc")}`;
         else {
           a = this.Aa + VKa(this);
           const b = _.DJa(this.Ba);
@@ -20477,18 +20538,19 @@ this._s = this._s || {};
         return a;
       }
       Hmc() {
-        var a;
-        (a = _.Ed(this, "k"))
-          ? ((a = a.split(".")), (a = 1 < a.length ? a[1] : null))
-          : (a = null);
-        return a;
+        // Takes the parameter k from the path to this file and outputs the first thing after the dot.
+        var k;
+        (k = _.getValueFromoaOrNull(this, "k"))
+          ? ((k = k.split(".")), (k = 1 < k.length ? k[1] : null))
+          : (k = null);
+        return k;
       }
       setCallback(a) {
         if (a != null && !cLa.test(a)) throw Error("hb`" + a);
-        _.Ko(this, "cb", a);
+        _.setValueTooaOrDelete(this, "cb", a);
       }
       clone() {
-        return _.Dd(this.toString());
+        return _.parseGoogleStaticURL(this.toString());
       }
     };
     OKa = {
@@ -20844,7 +20906,8 @@ this._s = this._s || {};
       equals(a) {
         if (this.params.size !== a.params.size) return false;
         for (const b of this.params.keys())
-          if (!nLa.has(b) && this.params.get(b) !== a.params.get(b)) return false;
+          if (!nLa.has(b) && this.params.get(b) !== a.params.get(b))
+            return false;
         return this.path === a.path || (_.FLa(a.path) && _.FLa(this.path));
       }
     };
@@ -21638,7 +21701,7 @@ this._s = this._s || {};
       } catch (d) {
         return false;
       }
-      const b = bLa(_.Dd(a)),
+      const b = bLa(_.parseGoogleStaticURL(a)),
         c = Object.keys(b);
       if (c.length === 0) return false;
       Cha((d) => {
@@ -22221,7 +22284,7 @@ this._s = this._s || {};
         Lla(this.dIa);
       }
       toString() {
-        return `${_.QMa(this)}[${_.fd(this)}]`;
+        return `${_.QMa(this)}[${_.assignUniqueID(this)}]`;
       }
       wIa() {}
       THd() {
@@ -24767,7 +24830,9 @@ this._s = this._s || {};
         this.oa = 0;
         this.Ea = this.Ja = false;
         this.Aa = {};
-        this.Ga = google.xjsu ? _.Dd(google.xjsu).Hmc() : null;
+        this.Ga = google.xjsu
+          ? _.parseGoogleStaticURL(google.xjsu).Hmc()
+          : null;
         this.Ba = [];
       }
       Ca(a, b) {
@@ -24947,7 +25012,7 @@ this._s = this._s || {};
       Vpa = {},
       Ypa = false,
       Zpa = 0;
-    var vqa = _.hd(() => new vPa()),
+    var vqa = _.cachedCallToFunction(() => new vPa()),
       vPa = class {
         constructor() {
           this.oa = jqa();
@@ -25187,7 +25252,7 @@ this._s = this._s || {};
     PPa = false;
     QPa = [];
     RPa = function (a, b) {
-      const c = _.ZKa(_.Dd(b)).filter(
+      const c = _.ZKa(_.parseGoogleStaticURL(b)).filter(
           (g) => !/^(?:sy|em)[0-9a-z]{0,4}$/.test(g)
         ),
         d = [];
@@ -25204,8 +25269,8 @@ this._s = this._s || {};
       d.push(`${"sp"}=${e}`);
       d.push(`${"ss"}=${f}`);
       d.push(`${"ids"}=${c.join(",")}`);
-      d.push(`${"am"}=${_.Ed(a.oa, "am")}`);
-      d.push(`${"k"}=${_.Ed(a.oa, "k")}`);
+      d.push(`${"am"}=${_.getValueFromoaOrNull(a.oa, "am")}`);
+      d.push(`${"k"}=${_.getValueFromoaOrNull(a.oa, "k")}`);
       d.push(`${"s"}=${a.Sa}`);
       d.push(...Mqa(b));
       google.log && google.log("ppm", `&${d.join("&")}`);
@@ -25234,8 +25299,8 @@ this._s = this._s || {};
       delete b.oa.m;
       delete b.oa.exm;
       delete b.oa.ed;
-      _.Ko(b, "dg", null);
-      _.Ko(b, "md", a.Hb);
+      _.setValueTooaOrDelete(b, "dg", null);
+      _.setValueTooaOrDelete(b, "md", a.Hb);
       return WPa(a, b.toString(), tEa ? 5 : 1)
         .then((c) => c.json().catch(() => {}))
         .catch(() => {});
@@ -25362,16 +25427,16 @@ this._s = this._s || {};
         ? ((c = b.filter((f) => a.Ma.has(f)).length === 0),
           e ? c && WKa(d, []) : (WKa(d, []), c && YKa(d, [])),
           _.aLa(d, {}),
-          _.Ko(d, "d", "0"),
+          _.setValueTooaOrDelete(d, "d", "0"),
           (d.Ba.xjs = "s" + (a.Ja ? "4" : "3")))
         : (Bqa(b.sort()),
           WKa(d, Array.from(c)),
-          _.Ko(d, "d", "1"),
+          _.setValueTooaOrDelete(d, "d", "1"),
           a.DTa && !e && _.aLa(d, a.DTa),
           a.Qa && (d.Ba.xjs = "s" + String(a.Qa === 1 ? 1 : 2)));
-      RDa ? _.Ko(d, "br-d", "1") : QDa && _.Ko(d, "br-d", "0");
-      _.Ko(d, "m", b.join(","));
-      _.Ko(d, "ed", "1");
+      RDa ? _.setValueTooaOrDelete(d, "br-d", "1") : QDa && _.setValueTooaOrDelete(d, "br-d", "0");
+      _.setValueTooaOrDelete(d, "m", b.join(","));
+      _.setValueTooaOrDelete(d, "ed", "1");
       return d.toString();
     };
     fQa = function (a, b, c, d) {
@@ -25488,17 +25553,17 @@ this._s = this._s || {};
           google.xjsus && google.xjsus.length > 0
             ? [google.xjsu, ...google.xjsus]
             : [google.xjsu];
-        this.Xa = _.Dd(this.Aa[0]);
+        this.Xa = _.parseGoogleStaticURL(this.Aa[0]);
         const a = $Ka(this.Xa);
         if (a === "1" || a === "3") (this.Ca = true), (this.Hb = "2");
         let b;
         ((b = google.xjs) == null ? 0 : b.basejs)
-          ? (this.Va = _.Dd(google.xjs.basejs))
+          ? (this.Va = _.parseGoogleStaticURL(google.xjs.basejs))
           : _.Ld(Error("nc"), {
               level: uEa ? 1 : 3,
             });
         this.Eb = this.Aa[this.Aa.length - 1];
-        this.oa = _.Dd(this.Eb);
+        this.oa = _.parseGoogleStaticURL(this.Eb);
         this.Ba = _.Xb();
         this.Ca &&
           vEa &&
@@ -25511,7 +25576,7 @@ this._s = this._s || {};
         this.Ma = new Set();
         let c;
         this.Ea = ((c = google.xjs) == null ? 0 : c.basecomb)
-          ? _.Dd(google.xjs.basecomb)
+          ? _.parseGoogleStaticURL(google.xjs.basecomb)
           : this.oa.clone();
         let d, e;
         this.La = new Set([
@@ -25522,12 +25587,12 @@ this._s = this._s || {};
             : []),
         ]);
         YKa(this.Ea, Array.from(this.La));
-        _.Ko(this.Ea, "ujg", "1");
+        _.setValueTooaOrDelete(this.Ea, "ujg", "1");
         let f;
         _.ea.fetch &&
           typeof _F_installCss === "function" &&
           ((f = google.xjs) == null ? 0 : f.basecss) &&
-          ((this.Ga = _.Dd(google.xjs.basecss)),
+          ((this.Ga = _.parseGoogleStaticURL(google.xjs.basecss)),
           WKa(this.Ga, Array.from(this.La)));
         this.Vb = Math.random();
       }
@@ -25555,8 +25620,8 @@ this._s = this._s || {};
       oQa,
       $qa;
     _.Eha(new nQa());
-    oQa = _.hd(() => new mQa());
-    _.Qqa = _.hd(() => {
+    oQa = _.cachedCallToFunction(() => new mQa());
+    _.Qqa = _.cachedCallToFunction(() => {
       const a = _.Xb();
       a.Aid(true);
       var b = oQa();
@@ -26087,7 +26152,7 @@ this._s = this._s || {};
     };
     _.cg.Ra = () => ({});
     _.cg.prototype.toString = function () {
-      return `${_.QMa(this)}[${_.fd(this.s4)}]`;
+      return `${_.QMa(this)}[${_.assignUniqueID(this.s4)}]`;
     };
     _.J(_.cg.prototype, "HELIf", function () {
       return this.toString;
@@ -29016,7 +29081,7 @@ this._s = this._s || {};
     _.Yh(_.AUa, _.Ln);
     _.CUa = function (a) {
       a = a || window;
-      const b = _.fd(a);
+      const b = _.assignUniqueID(a);
       return (BUa[b] = BUa[b] || new _.AUa(a));
     };
     BUa = {};
@@ -30737,7 +30802,7 @@ this._s = this._s || {};
     google.mum = function (a) {
       if (BOa && ola(a)) {
         var b = yla.getInstance(),
-          c = _.ZKa(_.Dd(a)).filter((d) => cua.has(d));
+          c = _.ZKa(_.parseGoogleStaticURL(a)).filter((d) => cua.has(d));
         if (c) {
           a = [];
           for (const d of c)
@@ -30773,7 +30838,7 @@ this._s = this._s || {};
     xWa = function (a) {
       const b = typeof a;
       return (b == "object" && a) || b == "function"
-        ? "o" + _.fd(a)
+        ? "o" + _.assignUniqueID(a)
         : b.charAt(0) + a;
     };
     _.ba = _.wWa.prototype;
@@ -32863,7 +32928,9 @@ this._s = this._s || {};
             if (a.yb) throw Error("Ld`" + b);
             a.yb = true;
             a.Ya = 0;
-            c[0] + 1 < m && b.charAt(c[0] + 1) == "+" && (c[0]++, (a.Hb = true));
+            c[0] + 1 < m &&
+              b.charAt(c[0] + 1) == "+" &&
+              (c[0]++, (a.Hb = true));
             for (; c[0] + 1 < m && b.charAt(c[0] + 1) == "0"; ) c[0]++, a.Ya++;
             if (f + g < 1 || a.Ya < 1) throw Error("Md`" + b);
             n = false;
@@ -34080,7 +34147,9 @@ this._s = this._s || {};
         });
       }
       isSupported(a) {
-        return a < this.minSize ? false : typeof CompressionStream !== "undefined";
+        return a < this.minSize
+          ? false
+          : typeof CompressionStream !== "undefined";
       }
     };
     var EZa = class {
@@ -35022,7 +35091,10 @@ this._s = this._s || {};
     _.As.prototype.Pc = function () {
       this.Nk &&
         (this.wRa &&
-          ((this.wRa = false), (this.N6a = true), this.Nk.abort(), (this.N6a = false)),
+          ((this.wRa = false),
+          (this.N6a = true),
+          this.Nk.abort(),
+          (this.N6a = false)),
         y_a(this, true));
       _.As.Oe.Pc.call(this);
     };
@@ -35722,7 +35794,7 @@ this._s = this._s || {};
       return A0a.innerHTML;
     };
     _.B0a = function (a) {
-      const b = (a[1] = _.ko(a[0]));
+      const b = (a[1] = _.parseURLUsingRegex(a[0]));
       if (b[6]) {
         const c = b[6].split("&"),
           d = {};
@@ -38111,7 +38183,8 @@ this._s = this._s || {};
       e.stopPropagation &&
         ((f._propagationStopped = e._propagationStopped || false),
         (f.stopPropagation = nya),
-        (f._immediatePropagationStopped = e._immediatePropagationStopped || false),
+        (f._immediatePropagationStopped =
+          e._immediatePropagationStopped || false),
         (f.stopImmediatePropagation = oya));
       return f;
     };
@@ -41056,15 +41129,22 @@ this._s = this._s || {};
         }
       }
     );
-    var Zbb, Wbb, Vbb;
-    _.Xbb = _.hd(() => Vbb() || _.Ed(Wbb(), "k"));
-    _.Ybb = _.hd(() => Wbb().Hmc());
-    Zbb = _.hd(() => {
+    var Zbb, parsedURLToThisFile, Vbb;
+    _.Xbb = _.cachedCallToFunction(
+      () => Vbb() || _.getValueFromoaOrNull(parsedURLToThisFile(), "k")
+    );
+    _.Ybb = _.cachedCallToFunction(() => parsedURLToThisFile().Hmc());
+    // _.ea - is some sort of fallback to this
+    // google.xjsu - is link to this js File
+    // Zbb is function that returns this link
+    URLToThisFile = _.cachedCallToFunction(() => {
       _.ea._F_jsUrl || (_.ea._F_jsUrl = google.xjsu);
       if (_.ea._F_jsUrl) return _F_jsUrl;
     });
-    Wbb = _.hd(() => _.Dd(Zbb()));
-    Vbb = _.hd(() => _.Hh(Zbb(), "ver"));
+    parsedURLToThisFile = _.cachedCallToFunction(() =>
+      _.parseGoogleStaticURL(URLToThisFile())
+    );
+    Vbb = _.cachedCallToFunction(() => _.Hh(Zbb(), "ver"));
     _.$bb = class {
       constructor(a = new _.lKa(), b = new kKa(), c = () => new Map()) {
         this.Ba = a;
@@ -45448,7 +45528,8 @@ this._s = this._s || {};
               d = new T7s(b, c, e.ei, e.index);
               b = _.df(
                 b,
-                (f) => (f && _.bf(f) ? f.hasAttribute("data-lhcontainer") : false),
+                (f) =>
+                  f && _.bf(f) ? f.hasAttribute("data-lhcontainer") : false,
                 false
               );
               b = _.Z6s(a.Dd, b);
@@ -45803,8 +45884,20 @@ this._s = this._s || {};
           false,
           this
         );
-        this.addListener(window, "attn_pause", () => N7s(this, true), false, this);
-        this.addListener(window, "attn_resume", () => M7s(this, true), false, this);
+        this.addListener(
+          window,
+          "attn_pause",
+          () => N7s(this, true),
+          false,
+          this
+        );
+        this.addListener(
+          window,
+          "attn_resume",
+          () => M7s(this, true),
+          false,
+          this
+        );
         _.B_.config.oa ||
           (this.addListener(window, "pagehide", this.Ba, false, this),
           this.addListener(window, "pageshow", this.Ca, false, this));
@@ -46606,7 +46699,8 @@ this._s = this._s || {};
           this.Aa();
           const a = [],
             b = new _.O5s();
-          for (const c of this.Ba) c.oa && !c.Aa && (a.push(c.ji), (c.Aa = true));
+          for (const c of this.Ba)
+            c.oa && !c.Aa && (a.push(c.ji), (c.Aa = true));
           if (a.length) {
             for (const c of a) _.Ij(b, 1, c);
             return b.serialize();
@@ -46645,7 +46739,8 @@ this._s = this._s || {};
           this.results = [];
           this.Ca = this.Pa = c;
           this.Ba = [];
-          this.Ja() && this.addListener(b, "attn-dom-chg", this.Ja, false, this);
+          this.Ja() &&
+            this.addListener(b, "attn-dom-chg", this.Ja, false, this);
         }
         Ja() {
           const a = document.body.querySelectorAll("[data-news-doc-id]");
@@ -46801,7 +46896,8 @@ this._s = this._s || {};
           this.Ja = this.Pa = c;
           this.Ca = [];
           this.ei = _.B_.ei;
-          this.kb() && this.addListener(b, "attn-dom-chg", this.kb, false, this);
+          this.kb() &&
+            this.addListener(b, "attn-dom-chg", this.kb, false, this);
         }
         kb() {
           var a = document.body.querySelectorAll('[jsname="Z9MBEf"]')[0];
@@ -47198,7 +47294,8 @@ this._s = this._s || {};
           this.Ja = this.Pa = c;
           this.Ba.push(new V9s(a.oa.bind(a), this.Dd));
           this.Ca = [];
-          this.Va() && this.addListener(b, "attn-dom-chg", this.Va, false, this);
+          this.Va() &&
+            this.addListener(b, "attn-dom-chg", this.Va, false, this);
         }
         Va() {
           if (!this.Ba.some((a) => a.kb())) return false;
@@ -47269,7 +47366,8 @@ this._s = this._s || {};
           this.Ba = [];
           this.Ja = this.Pa = c;
           this.Ca = [];
-          this.Va() && this.addListener(b, "attn-dom-chg", this.Va, false, this);
+          this.Va() &&
+            this.addListener(b, "attn-dom-chg", this.Va, false, this);
         }
         Va() {
           const a = document.body.querySelectorAll("[data-w2x-shf]");
@@ -47797,14 +47895,15 @@ this._s = this._s || {};
         var m;
         k && (m = JSON.parse(_.Hc(_.mqa(k) || (0, _.dka)``).toString()));
         m &&
-          (_.D(a, 8) && (m.SNlM0e = _.getStringFromValue(_.getValueFromWIZ("SNlM0e"))),
+          (_.D(a, 8) &&
+            (m.SNlM0e = _.getStringFromValue(_.getValueFromWIZ("SNlM0e"))),
           (h.WIZ_global_data = m));
         if ((m = _.B(a, 14))) {
-          m = _.Dd(m);
+          m = _.parseGoogleStaticURL(m);
           var n;
-          h._ck = (n = _.Ed(m, "ck")) != null ? n : "";
+          h._ck = (n = _.getValueFromoaOrNull(m, "ck")) != null ? n : "";
           let r;
-          h._rs = (r = _.Ed(m, "rs")) != null ? r : "";
+          h._rs = (r = _.getValueFromoaOrNull(m, "rs")) != null ? r : "";
         } else (h._ck = _.B(a, 2)), (h._rs = _.B(a, 3));
         h._F_jsUrl = `${e}`;
         h.guestRootElement = d;
@@ -47943,10 +48042,10 @@ this._s = this._s || {};
       return a;
     };
     xNb = function (a, b) {
-      _.Ko(a, "ck", b);
+      _.setValueTooaOrDelete(a, "ck", b);
     };
     yNb = function (a, b) {
-      _.Ko(a, "rs", b);
+      _.setValueTooaOrDelete(a, "rs", b);
     };
     zNb = function (a, b) {
       if (!(a instanceof _.l)) throw Error("fa");
@@ -47977,7 +48076,7 @@ this._s = this._s || {};
     BNb = (a, b) => {
       ({ cssRowKey: f, ipf: e, DTa: d, callback: c } = {});
       var c, d, e, f;
-      _.Ko(a, "m", b.join(","));
+      _.setValueTooaOrDelete(a, "m", b.join(","));
       d && _.aLa(a, d);
       f && (xNb(a, f), e ? yNb(a, e) : ANb && (ANb = false));
       c && a.setCallback(c);
@@ -48016,8 +48115,8 @@ this._s = this._s || {};
           }
           return _.uNb(y, e);
         }
-        const m = _.Dd(k);
-        let n = _.Ed(m, "cb");
+        const m = _.parseGoogleStaticURL(k);
+        let n = _.getValueFromoaOrNull(m, "cb");
         const r = n && rNb.has(n);
         if (!n || r) n = wNb();
         m.setCallback(n);
@@ -48502,7 +48601,9 @@ this._s = this._s || {};
     };
     ugb = function (a) {
       const b = a.Fa();
-      return b ? (_.tgb(b, null), (b.XyHi9 = null), (a.Hd = null), true) : false;
+      return b
+        ? (_.tgb(b, null), (b.XyHi9 = null), (a.Hd = null), true)
+        : false;
     };
     wgb = function () {
       const a = _.getValueFromWIZ("w2btAe");
@@ -49384,7 +49485,8 @@ this._s = this._s || {};
         c = _.Aja();
         c != null && (this.oa.Eya = c);
         c = _.getValueFromWIZ("cfb2h");
-        c.hasValue() && ((c = c.toString()), (d = _.RZa(this.oa.oa)), _.Ef(d, 7, c));
+        c.hasValue() &&
+          ((c = c.toString()), (d = _.RZa(this.oa.oa)), _.Ef(d, 7, c));
       }
       getInstance() {
         return this.oa;
@@ -49497,7 +49599,8 @@ this._s = this._s || {};
         jFb(this, a, 2, b);
       }
       logEvent(a, b = false) {
-        var c = this.Ca instanceof _.TDb ? _.SDb(this.Ca, a, void 0, false) : null;
+        var c =
+          this.Ca instanceof _.TDb ? _.SDb(this.Ca, a, void 0, false) : null;
         return c
           ? (this.Ea.dispatch(c),
             (b || (this.Da && a.Ue)) && this.Ea.flush(),
@@ -49842,7 +49945,7 @@ this._s = this._s || {};
           }));
       },
       Qac = function (a, b) {
-        a.Aa.delete(_.fd(b.element)) &&
+        a.Aa.delete(_.assignUniqueID(b.element)) &&
           (b.eventTypes.has(1) &&
             (a.Ea--,
             a.Ea === 0 &&
@@ -49916,7 +50019,7 @@ this._s = this._s || {};
           this.Va = new Map();
         }
         listen(a, b, c = Iac, d = false, e = false, f = false, g, h) {
-          const k = _.fd(a);
+          const k = _.assignUniqueID(a);
           c = new Set(c);
           if (e) this.unlisten(a);
           else if (this.Aa.has(k)) throw Error("ng");
@@ -49963,13 +50066,13 @@ this._s = this._s || {};
             (Oac(this), (a = this.Aa.get(k)), Pac(this, a, g, h), this.Da++);
         }
         unlisten(a) {
-          (a = this.Aa.get(_.fd(a))) && Qac(this, a);
+          (a = this.Aa.get(_.assignUniqueID(a))) && Qac(this, a);
         }
         dismiss(a) {
-          (a = this.Aa.get(_.fd(a))) && Lac(this, a, 0);
+          (a = this.Aa.get(_.assignUniqueID(a))) && Lac(this, a, 0);
         }
         hasListener(a) {
-          return this.Aa.has(_.fd(a));
+          return this.Aa.has(_.assignUniqueID(a));
         }
         Xa(a, b) {
           Oac(this);
@@ -50889,7 +50992,8 @@ this._s = this._s || {};
     };
     _.GKc = function (a, b, c) {
       var d = a.oa();
-      if (b === false || (!b && a.isVisible())) a.Ja ? a.Da(d, c) : (a.Ga = null);
+      if (b === false || (!b && a.isVisible()))
+        a.Ja ? a.Da(d, c) : (a.Ga = null);
       else if (a.Ja) {
         b = FKc(d, "theme", 0);
         var e = FKc(d, "zidx", 0);
@@ -51018,7 +51122,9 @@ this._s = this._s || {};
         return _.Cd(this.oa(), "disableDismissEventBubbling");
       }
       Pa() {
-        return this.getData("sc").hasValue() ? _.getStringFromValue(this.getData("sc")) : null;
+        return this.getData("sc").hasValue()
+          ? _.getStringFromValue(this.getData("sc"))
+          : null;
       }
       Db() {
         return this.getData("oc").hasValue();
@@ -51132,7 +51238,7 @@ this._s = this._s || {};
     _.Gh.Ra = () => ({});
     _.ba = _.Gh.prototype;
     _.ba.toString = function () {
-      return `${_.QMa(this)}[${_.fd(this.Hd)}]`;
+      return `${_.QMa(this)}[${_.assignUniqueID(this.Hd)}]`;
     };
     _.ba.Bga = function () {
       throw Error("uc");
@@ -51766,7 +51872,8 @@ this._s = this._s || {};
   }
   try {
     _.htk = function (a, b) {
-      a.oa && (b && a.events.tx(8, {}), (a.oa = false), _.Hn(a.Ba), (a.Ba = null));
+      a.oa &&
+        (b && a.events.tx(8, {}), (a.oa = false), _.Hn(a.Ba), (a.Ba = null));
     };
     _.itk = class extends _.Gh {
       static Ra() {
@@ -52381,7 +52488,14 @@ this._s = this._s || {};
       return new _.sU(d, a, b, c, false, false);
     };
     _.sU = class {
-      constructor(a = [], b = new Map(), c = true, d = false, e = false, f = false) {
+      constructor(
+        a = [],
+        b = new Map(),
+        c = true,
+        d = false,
+        e = false,
+        f = false
+      ) {
         this.Tq = a;
         this.i0 = b;
         this.Dlb = c;
@@ -54027,7 +54141,10 @@ this._s = this._s || {};
           h && a.yg.Ga()
             ? a.UQa.put(a.yg.Da(), _.Euk(g))
             : h ||
-              a.ypb.set(_.Duk(b), new _.sU(g.No(), g.getParameters(), true, true));
+              a.ypb.set(
+                _.Duk(b),
+                new _.sU(g.No(), g.getParameters(), true, true)
+              );
         }
       }
       if (b.Aa) return true;
@@ -57070,7 +57187,11 @@ this._s = this._s || {};
     g2s = function (a, b) {
       return _.A(function* () {
         var c;
-        c = (c = _.$Ys(b)) ? ((c = c.dropEffect) ? c !== "none" : false) : false;
+        c = (c = _.$Ys(b))
+          ? (c = c.dropEffect)
+            ? c !== "none"
+            : false
+          : false;
         if (!c) {
           let d, e;
           ((e = (d = a.rAa.oa) == null ? void 0 : d.Ba) != null ? e : 3) ===
@@ -62200,7 +62321,8 @@ Dual licensed under the MIT and GPL licenses.
           this.Ya = a = a.data;
           const b = this.getRoot().hasClass("sbfc");
           a
-            ? (this.dB.Sr(false), b || ((this.Zj.Br().rows = 1), (this.oa = false)))
+            ? (this.dB.Sr(false),
+              b || ((this.Zj.Br().rows = 1), (this.oa = false)))
             : a ||
               (this.getRoot().addClass("sbfc"),
               this.Zj.oa(),
@@ -63303,7 +63425,8 @@ Dual licensed under the MIT and GPL licenses.
           let e;
           const f = {
             source: (c = b == null ? void 0 : b.source) != null ? c : this,
-            intercept: (d = b == null ? void 0 : b.intercept) != null ? d : true,
+            intercept:
+              (d = b == null ? void 0 : b.intercept) != null ? d : true,
             focusReset:
               (e = b == null ? void 0 : b.focusReset) != null ? e : "manual",
             scroll: b == null ? void 0 : b.scroll,
@@ -66220,7 +66343,9 @@ Dual licensed under the MIT and GPL licenses.
     };
     var Uec = function (a, b) {
         const c = Tec(b);
-        return c === -1 ? false : !b.slice(c).some((d) => d.overlay.contains(a));
+        return c === -1
+          ? false
+          : !b.slice(c).some((d) => d.overlay.contains(a));
       },
       Vec = function (a) {
         return (
@@ -66534,7 +66659,8 @@ Dual licensed under the MIT and GPL licenses.
               ? _.udc(c, -1)
                 ? (d = true)
                 : (Vdc(Error("Eg`" + c.outerHTML)), (d = false))
-              : (Vdc(Error("Dg`" + c.outerHTML + "`" + a.overlay)), (d = false));
+              : (Vdc(Error("Dg`" + c.outerHTML + "`" + a.overlay)),
+                (d = false));
           if (d) return c;
           if (a.Ja === 1 && a.Ba) {
             var e;
@@ -66831,7 +66957,8 @@ Dual licensed under the MIT and GPL licenses.
           let f = true;
           a.length &&
             ((e = a.filter((g) => !(0, _.Qqa)().x7(g).isLoaded())),
-            e.length && (_.fra(e, f, false, false, d ? c : void 0), (f = false)));
+            e.length &&
+              (_.fra(e, f, false, false, d ? c : void 0), (f = false)));
           _.fra(b, f, true, true, c);
         }
       },
@@ -66855,7 +66982,8 @@ Dual licensed under the MIT and GPL licenses.
         const a = EQw()
           .filter(
             (b) =>
-              (_.AOa || _.vpa(b.root, _.ePa)) && _.Zoa(b.root, false, false, null) & 1
+              (_.AOa || _.vpa(b.root, _.ePa)) &&
+              _.Zoa(b.root, false, false, null) & 1
           )
           .map((b) => b.moduleId);
         return Promise.resolve([...new Set(a)]);
