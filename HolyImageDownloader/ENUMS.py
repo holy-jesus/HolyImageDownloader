@@ -46,7 +46,7 @@ class Color(Enum):
     WHITE = "specific:white"
     GRAY = "specific:gray"
     BLACK = "specific:black"
-    BROWN = "specific:brown"
+    BROWN = "specific:brown"    
 
 
 class Type(Enum):
@@ -80,7 +80,7 @@ class SafeSearch(Enum):
 class Format(Enum):
     ANY = ""
     JPG = "jpg"
-    GIF = "GIF"
+    GIF = "gif"
     PNG = "png"
     BMP = "bmp"
     SVG = "svg"
