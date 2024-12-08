@@ -53,6 +53,7 @@ def download(
         ) as progress:
             task = progress.add_task(description="Fetching images...", total=None)
             async for batch in google.search(query):
+                console.print(batch)
                 results += batch.results
                 progress.update(
                     task, description=f"Fetching images... {len(results)} fetched."

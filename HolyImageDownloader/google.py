@@ -1,38 +1,26 @@
 import asyncio
+import ctypes
+import codecs
 import re
+import os
+import locale
 from datetime import datetime
 from random import choice, randint
 from typing import AsyncGenerator, Tuple
 from urllib.parse import quote_plus
 from pathlib import Path
-import codecs
-import os
-import ctypes
-import locale
-
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 import aiohttp
-from bs4 import BeautifulSoup
 import json
+from bs4 import BeautifulSoup
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.console import Console
 
-try:
-    from searchinfo import SearchInfo
-    from batch import Batch
-
-    # from result import Result
-    from ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
-    from config import HEADERS, URL
-    from downloader import Downloader
-except ModuleNotFoundError:
-    from .searchinfo import SearchInfo
-    from .batch import Batch
-
-    # from .result import Result
-    from .ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
-    from .config import HEADERS, URL
-    from .downloader import Downloader
+from HolyImageDownloader.searchinfo import SearchInfo
+from HolyImageDownloader.batch import Batch
+from HolyImageDownloader.ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
+from HolyImageDownloader.config import HEADERS, URL
+from HolyImageDownloader.downloader import Downloader
 
 console = Console()
 _type = type
@@ -89,12 +77,18 @@ class ImageDownloader:
 
     async def _generator(self, search_info: SearchInfo) -> AsyncGenerator[Batch, None]:
         await self._get_params(search_info)
-        await self._switch_safe_search(search_info)
+        console.print("Got params")
+        # await self._switch_safe_search(search_info)
+        # console.print("Switched SafeSearch")
+        print("&".join(f"{key}={value}" for key, value in search_info.params.items()))
+        return
         response = await self._make_request(
             "GET", URL.SEARCH, params=search_info.params
         )
         content = await response.content.read()
+        print(content)
         batch = self._parse_page(content, search_info)
+        console.print(batch)
         yield batch
         while search_info.batchexecute_post is not None:
             response = await self.session.post(
@@ -240,6 +234,7 @@ class ImageDownloader:
         for script in soup.select("script"):
             text = script.get_text()
             if "AF_initDataCallback({key: 'ds:1', hash: '2', data:" in text:
+                console.print("Found AF_initDataCallback")
                 text = text.lstrip(
                     "AF_initDataCallback({key: 'ds:1', hash: '2', data:"
                 ).rstrip(", sideChannel: {}});")
@@ -247,8 +242,10 @@ class ImageDownloader:
                 results = self._parse_AF_initDataCallback(AF_initDataCallback, info)
                 batch = Batch(results, self.session)
             elif text.startswith("var AF_initDataKeys"):
+                console.print("Found AF_initDataKeys")
                 info.rpcids = re.findall(r"'ds:1' : {id:'(.*)',", text)[0]
             elif text.startswith("window.WIZ_global_data"):
+                console.print("Found window.WIZ_global_data")
                 WIZ_global_data = json.loads(
                     re.findall(r"window.WIZ_global_data = (.*);", text)[0]
                 )
@@ -370,6 +367,8 @@ if __name__ == "__main__":
     async def main():
         try:
             google = ImageDownloader()
+            async for batch in google.search("Hello world"):
+                print(batch)
         except Exception:
             console.print_exception(show_locals=False)
         finally:

@@ -13,7 +13,7 @@ HEADERS = {
 
 class URL:
     BASE = "https://www.google.com"
-    IMAGE_SEARCH = "https://www.google.com/imghp"
+    # IMAGE_SEARCH = "https://www.google.com/imghp"
+    IMAGE_SEARCH_PAGE = "https://www.google.com/advanced_image_search"
     SEARCH = "https://www.google.com/search"
-    BATCHEXECUTE = "https://www.google.com/_/VisualFrontendUi/data/batchexecute"
     SAFESEARCH = "https://www.google.com/safesearch"

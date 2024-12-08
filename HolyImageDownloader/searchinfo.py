@@ -10,6 +10,7 @@ except ImportError:
 class SearchInfo:
     search_query: str = None
     safe_search: SafeSearch = SafeSearch.FILTER
+    xjs: dict = None
     tbs: str = None
     params: dict = None
     rpcids: str = None

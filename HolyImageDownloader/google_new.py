@@ -17,22 +17,11 @@ from bs4 import BeautifulSoup
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.console import Console
 
-try:
-    from searchinfo import SearchInfo
-    from batch import Batch
-
-    # from result import Result
-    from ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
-    from config import HEADERS, URL
-    from downloader import Downloader
-except ModuleNotFoundError:
-    from .searchinfo import SearchInfo
-    from .batch import Batch
-
-    # from .result import Result
-    from .ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
-    from .config import HEADERS, URL
-    from .downloader import Downloader
+from HolyImageDownloader.searchinfo import SearchInfo
+from HolyImageDownloader.batch import Batch
+from HolyImageDownloader.ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
+from HolyImageDownloader.config import HEADERS, URL
+from HolyImageDownloader.downloader import Downloader
 
 console = Console()
 _type = type
@@ -275,8 +264,9 @@ class ImageDownloader:
         )
         if not match:
             raise Exception("")  # TODO
-        google_xjs = json5.loads(match.group())
-
+        xjs = json5.loads(match.group())
+        info.xjs = xjs
+        print(xjs)
         return
         batch = None
         soup = BeautifulSoup(content, "lxml")
@@ -316,6 +306,29 @@ class ImageDownloader:
             info.batchexecute_params["_reqid"] % 100000
         ) + (100000 * info.page_num)
         return batch
+
+    def _form_async_query(self, info: SearchInfo):
+        _pms = re.search(
+            "/k=([^/]+)",
+            info.xjs["basecomb"],
+        )
+        if not _pms:
+            _pms = "s"
+        else:
+            _pms = _pms.group(1)
+        params = {
+            "arc_id": "srp_q_110",
+            "ffilt": "all",
+            "ve_name": "MoreResultsContainer",
+            "use_ac": "false",
+            "inf": "1",
+            "_id": "",
+            "_pms": _pms,
+            "_fmt": "pc",
+            "_basecss": quote_plus(info.xjs["basecss"]),
+            "_basejs": quote_plus(info.xjs["basejs"]),
+            "_basecomb": quote_plus(info.xjs["basecomb"]),
+        }
 
     async def _get_params(self, search_info: SearchInfo):
         pass
