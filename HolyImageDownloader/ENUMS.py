@@ -46,7 +46,7 @@ class Color(Enum):
     WHITE = "specific:white"
     GRAY = "specific:gray"
     BLACK = "specific:black"
-    BROWN = "specific:brown"    
+    BROWN = "specific:brown"
 
 
 class Type(Enum):
@@ -77,7 +77,7 @@ class SafeSearch(Enum):
     OFF = "off"
 
 
-class Format(Enum):
+class FileType(Enum):
     ANY = ""
     JPG = "jpg"
     GIF = "gif"
@@ -89,8 +89,8 @@ class Format(Enum):
     RAW = "craw"
 
 
-class Country(Enum):
-    ANY_REGION = ""
+class Region(Enum):
+    ANY = ""
     AFGHANISTAN = "countryAF"
     ALBANIA = "countryAL"
     ALGERIA = "countryDZ"

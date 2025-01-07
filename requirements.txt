@@ -5,3 +5,4 @@ json5==0.10.0
 lxml==5.3.0
 pillow==11.0.0
 typer==0.15.1
+js2py==0.74

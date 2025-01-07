@@ -1,9 +1,6 @@
-try:
-    from image import Image
-    from website import Website
-except ModuleNotFoundError:
-    from .image import Image
-    from .website import Website
+from HolyImageDownloader.image import Image
+from HolyImageDownloader.website import Website
+
 
 class Result:
     def __init__(self, json: list) -> None:

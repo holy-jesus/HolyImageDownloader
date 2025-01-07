@@ -1,29 +1,50 @@
 import asyncio
-import ctypes
-import codecs
 import re
-import os
-import locale
-from datetime import datetime
-from random import choice, randint
+import json
 from typing import AsyncGenerator, Tuple
 from urllib.parse import quote_plus
 from pathlib import Path
 
+import js2py
 import aiohttp
-import json
+import json5
 from bs4 import BeautifulSoup
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.console import Console
 
 from HolyImageDownloader.searchinfo import SearchInfo
 from HolyImageDownloader.batch import Batch
-from HolyImageDownloader.ENUMS import Color, Size, Time, Type, UsageRights, SafeSearch
+from HolyImageDownloader.ENUMS import (
+    Color,
+    Size,
+    Time,
+    Type,
+    UsageRights,
+    SafeSearch,
+    AspectRatio,
+    Region,
+    FileType,
+)
 from HolyImageDownloader.config import HEADERS, URL
 from HolyImageDownloader.downloader import Downloader
+from HolyImageDownloader.utils import exclude_empty_values
 
 console = Console()
 _type = type
+_SPECIFIC_COLORS = (
+    Color.RED,
+    Color.ORANGE,
+    Color.YELLOW,
+    Color.GREEN,
+    Color.TEAL,
+    Color.BLUE,
+    Color.PURPLE,
+    Color.PINK,
+    Color.WHITE,
+    Color.GRAY,
+    Color.BLACK,
+    Color.BROWN,
+)
 
 
 class ImageDownloader:
@@ -38,12 +59,19 @@ class ImageDownloader:
     def search(
         self,
         search_query: str,
+        *,
+        this_exact_word_or_phrase: str = None,
+        any_of_these_words: str = None,
+        none_of_these_words: str = None,
         safe_search: SafeSearch = SafeSearch.FILTER,
-        size: Size = None,
-        color: Color = None,
-        type: Type = None,
-        time: Time = None,
-        usage_rights: UsageRights = None,
+        image_size: Size = Size.ANY,
+        aspect_ratio: AspectRatio = AspectRatio.ANY,
+        colours_in_the_image: Color = Color.ANY,
+        type_of_image: Type = Type.ANY,
+        region: Region = Region.ANY,
+        site_or_domain: str = None,
+        file_type: FileType = FileType.ANY,
+        usage_rights: UsageRights = UsageRights.ANY,
     ) -> AsyncGenerator[Batch, None]:
         if not search_query:
             raise ValueError("Search query can't be empty.")
@@ -51,71 +79,47 @@ class ImageDownloader:
             raise ValueError(
                 f'Search query must be type "str", not "{_type(search_query)}"'
             )
-        quoted_search_query = quote_plus(search_query)
-        params = {"q": quoted_search_query, "oq": quoted_search_query, "gbv": "2"}
-        tbs = ",".join(q.value for q in (size, color, type, time, usage_rights) if q)
-        search_info = SearchInfo(
-            search_query=search_query, safe_search=safe_search, tbs=tbs, params=params
+        info = SearchInfo(
+            search_query=search_query,
+            this_exact_word_or_phrase=this_exact_word_or_phrase,
+            any_of_these_words=any_of_these_words,
+            none_of_these_words=none_of_these_words,
+            safe_search=safe_search,
+            image_size=image_size,
+            aspect_ratio=aspect_ratio,
+            colours_in_the_image=colours_in_the_image,
+            type_of_image=type_of_image,
+            region=region,
+            site_or_domain=site_or_domain,
+            file_type=file_type,
+            usage_rights=usage_rights,
         )
-        return self._generator(search_info)
-
-    async def _switch_safe_search(self, info: SearchInfo):
-        response = await self._make_request("GET", "https://www.google.com/safesearch")
-        content = await response.text()
-        soup = BeautifulSoup(content, "lxml")
-        attribute = {
-            SafeSearch.FILTER: "data-setprefs-filter-url",
-            SafeSearch.BLUR: "data-setprefs-blur-url",
-            SafeSearch.OFF: "data-setprefs-off-url",
-        }[info.safe_search]
-        element = soup.find(attrs={attribute: True})
-        url = "https://www.google.com" + element[attribute]
-        response = await self._make_request("GET", url)
-        if response.status == 204:
-            return True
-        return False
-
-    async def _generator(self, search_info: SearchInfo) -> AsyncGenerator[Batch, None]:
-        await self._get_params(search_info)
-        console.print("Got params")
-        # await self._switch_safe_search(search_info)
-        # console.print("Switched SafeSearch")
-        print("&".join(f"{key}={value}" for key, value in search_info.params.items()))
-        return
-        response = await self._make_request(
-            "GET", URL.SEARCH, params=search_info.params
-        )
-        content = await response.content.read()
-        print(content)
-        batch = self._parse_page(content, search_info)
-        console.print(batch)
-        yield batch
-        while search_info.batchexecute_post is not None:
-            response = await self.session.post(
-                URL.BATCHEXECUTE,
-                data=search_info.batchexecute_post,
-                params=search_info.batchexecute_params,
-                headers=self.headers,
-            )
-            content = await response.text()
-            batch = self._parse_batchexecute(content, search_info)
-            yield batch
+        return self._generator(info)
 
     async def download(
         self,
         search_query: str,
         path: Path | str | None = None,
+        *,
+        this_exact_word_or_phrase: str = None,
+        any_of_these_words: str = None,
+        none_of_these_words: str = None,
         safe_search: SafeSearch = SafeSearch.FILTER,
-        max_images: int | None = None,
-        size: Size | None = None,
-        color: Color | None = None,
-        type: Type | None = None,
-        time: Time | None = None,
-        usage_rights: UsageRights | None = None,
+        image_size: Size = Size.ANY,
+        aspect_ratio: AspectRatio = AspectRatio.ANY,
+        colours_in_the_image: Color = Color.ANY,
+        type_of_image: Type = Type.ANY,
+        region: Region = Region.ANY,
+        site_or_domain: str = None,
+        file_type: FileType = FileType.ANY,
+        usage_rights: UsageRights = UsageRights.ANY,
+
+        max_images: int = None,
         number_of_downloaders: int | None = 50,
         new_size: Tuple[int, int] | None = None,
         new_format: str | None = None,
         maintain_aspect_ratio: bool = False,
+
     ):
         loop = asyncio.get_event_loop()
         max_images = max_images if max_images else -1
@@ -134,7 +138,19 @@ class ImageDownloader:
         ) as progress:
             task = progress.add_task(description="Fetching images...", total=None)
             async for batch in self.search(
-                search_query, safe_search, size, color, type, time, usage_rights
+                search_query=search_query,
+                this_exact_word_or_phrase=this_exact_word_or_phrase,
+                any_of_these_words=any_of_these_words,
+                none_of_these_words=none_of_these_words,
+                safe_search=safe_search,
+                image_size=image_size,
+                aspect_ratio=aspect_ratio,
+                colours_in_the_image=colours_in_the_image,
+                type_of_image=type_of_image,
+                region=region,
+                site_or_domain=site_or_domain,
+                file_type=file_type,
+                usage_rights=usage_rights,
             ):
                 results += batch.results
                 progress.update(
@@ -160,63 +176,170 @@ class ImageDownloader:
                 await asyncio.sleep(0.1)
                 progress.update(task, completed=downloader.done)
 
-    def _parse_AF_initDataCallback(self, AF_initDataCallback: dict, info: SearchInfo):
-        if len(AF_initDataCallback[56]) < 2:
-            # There are no images for this search query
-            info.grid_state = None
-            info.cursor = None
-            info.batchexecute_post = None
-            return None
-        elif not AF_initDataCallback[56][1][0][-1][0][0]["444383007"][12][16]:
-            # The pictures are over
-            info.grid_state = None
-            info.cursor = None
-            info.batchexecute_post = None
-        else:
-            # elif AF_initDataCallback[56][1][0][-1][0][0]["444383007"][12][0] == "GRID_STATE0":
-            batchexecute_data = AF_initDataCallback[56][1][0][-1][0][0]["444383007"][12]
-            info.grid_state = batchexecute_data[11]
-            info.cursor = (
-                codecs.decode(batchexecute_data[16][3], "unicode_escape"),
-                codecs.decode(batchexecute_data[16][4], "unicode_escape"),
-            )
+    async def _generator(self, info: SearchInfo) -> AsyncGenerator[Batch, None]:
+        imgc, imgcolor = info.colours_in_the_image.value, ""
+        if "specific:" in imgc:
+            imgc, imgcolor = imgc.split(":")
+
+        await self._switch_safe_search(info)
+        console.print("Switched SafeSearch")
+
+        response = await self._make_request(
+            "GET",
+            URL.SEARCH,
+            exclude_empty_values(
+                {
+                    "as_st": "y",
+                    "tbm": "isch",
+                    "as_q": info.search_query,
+                    "as_epq": info.this_exact_word_or_phrase,
+                    "as_oq": info.any_of_these_words,
+                    "as_eq": info.none_of_these_words,
+                    "imgsz": info.image_size.value,
+                    "imgar": info.aspect_ratio.value,
+                    "imgc": imgc,
+                    "imgcolor": imgcolor,
+                    "imgtype": info.type_of_image.value,
+                    "cr": info.region.value,
+                    "as_sitesearch": info.site_or_domain,
+                    "as_filetype": info.file_type.value,
+                    "tbs": "",
+                }
+            ),
+        )
+        content = await response.text()
+        with open("dump/page", "w") as f:
+            f.write(content)
+        batch, params = self._process_page(content, info)
+        yield batch
+        while info.vet is not None:
+            response = await self._make_request("GET", URL.SEARCH, params)
+            text = await response.text()
+            with open(f"dump/response{info.page_num}", "w") as f:
+                f.write(text)
+            batch, params = self._process_response(text, info)
+            yield batch
+        return
+
+    def _process_page(
+        self, content: str, info: SearchInfo
+    ) -> tuple[Batch | None, dict]:
+        soup = BeautifulSoup(content, "lxml")
+        batch = self._parse_page(content, soup, info)
+        params = self._get_params(info)
+        return batch, params
+
+    def _process_response(
+        self, content: str, info: SearchInfo
+    ) -> tuple[Batch | None, dict]:
+        batch = self._parse_response(content, info)
+        params = self._get_params(info) if info.vet else None
+        return batch, params
+
+    def _parse_page(
+        self, content: str, soup: BeautifulSoup, info: SearchInfo
+    ) -> Batch | None:
+        function_pattern = r"\(function\s*\(\)\s*\{([\s\S]*?)\}\s*\)\(\);"
+        match = re.search(
+            r"\{basecomb:'[^']+',basecss:'[^']+',basejs:'[^']+',excm:\[[^\]]+\]\}",
+            content,
+        )
+        if not match:
+            raise Exception("")  # TODO
+        xjs = json5.loads(match.group())
+        info.xjs = xjs
+
+        inputs = soup.find(attrs={"id": "tophf"})
+        info.sca_esv = inputs.find("input", {"name": "sca_esv"})["value"]
+        info.as_st = inputs.find("input", {"name": "as_st"})["value"]
+        info.udm = inputs.find("input", {"name": "udm"})["value"]
+
+        next = soup.find(attrs={"jsname": "sgxt2d"})
+        prev = soup.find(attrs={"jsname": "EvDH1d"})
+
+        assert next
+        assert prev
+
+        arc_srp = next["id"]
+        vet = next["data-ved"]
+        ved = prev["data-ved"]
+
+        info.arc_srp = arc_srp
+        info.vet = vet
+        info.ved = ved
+
+        batch = None
+
+        for script in soup.select("script"):
+            text = script.get_text()
+            if "{kEI:" in text:
+                function_text = re.findall(function_pattern, text)[0]
+                match = re.search(r"var\s+_g\s*=\s*\{[^}]+\}", function_text)
+                _g = js2py.eval_js(match.group(0))
+                info.kBL = _g["kBL"]
+                info.kEI = _g["kEI"]
+                info.kOPI = str(_g["kOPI"])
+            if "google.sn=" in text:
+                function_text = re.findall(function_pattern, text)[1]
+                matches = re.findall(r"google\.(\w+)='(.*?)';", function_text)
+                result = {key: value for key, value in matches}
+                info.sn = _g[result["sn"]]
+            if "window.WIZ_global_data" in text:
+                initial_data = re.findall(function_pattern, text)[6].split(
+                    ";var a=m;", 1
+                )[0]
+                data = js2py.eval_js(initial_data).to_dict()
+                batch = self._parse_images(data.values())
+        return batch
+
+    def _parse_images(self, objects: list) -> Batch | None:
         results = []
-        for result in AF_initDataCallback[56][1][0][-1][1][0]:
-            if result[0][0]["444383007"][1] is None:
+        for value in objects:
+            if len(value) < 2 or value[0] != 1 or not isinstance(value[1], list):
                 continue
-            result = result[0][0]["444383007"][1]
-            if isinstance(result[21], dict):
+
+            if len(value) >= 26:
+
                 preview = {
-                    "url": result[21][0],
-                    "width": int(result[21][2]),
-                    "height": int(result[21][1]),
+                    "url": value[1][20][0],
+                    "height": value[1][20][1],
+                    "width": value[1][20][2],
                     "preview": True,
+                    "blurred": False,
                 }
                 blurred = {
-                    "url": result[2][0],
-                    "width": int(result[2][2]),
-                    "height": int(result[2][1]),
+                    "url": value[1][2][0],
+                    "height": value[1][2][1],
+                    "width": value[1][2][2],
                     "preview": True,
+                    "blurred": True,
                 }
             else:
                 preview = {
-                    "url": result[2][0],
-                    "width": int(result[2][2]),
-                    "height": int(result[2][1]),
+                    "url": value[1][2][0],
+                    "height": value[1][2][1],
+                    "width": value[1][2][2],
                     "preview": True,
+                    "blurred": False,
                 }
                 blurred = None
             image = {
-                "url": result[3][0],
-                "width": int(result[3][2]),
-                "height": int(result[3][1]),
+                "url": value[1][3][0],
+                "height": value[1][3][1],
+                "width": value[1][3][2],
                 "preview": False,
+                "blurred": False,
             }
+
+            if isinstance(value[1][9], dict):
+                info = value[1][9]
+            else:
+                info = value[1][-1]
             website = {
-                "url": result[25]["2003"][2],
-                "base_url": result[25]["2003"][17],
-                "title": result[25]["2003"][3],
-                "name": result[25]["2003"][12],
+                "url": info["2003"][2],
+                "base_url": info["2003"][17],
+                "title": info["2003"][3],
+                "name": info["2003"][12],
             }
             results.append(
                 {
@@ -226,127 +349,113 @@ class ImageDownloader:
                     "blurred": blurred,
                 }
             )
-        return results
-
-    def _parse_page(self, content: str | bytes, info: SearchInfo) -> Batch | None:
-        batch = None
-        soup = BeautifulSoup(content, "lxml")
-        for script in soup.select("script"):
-            text = script.get_text()
-            if "AF_initDataCallback({key: 'ds:1', hash: '2', data:" in text:
-                console.print("Found AF_initDataCallback")
-                text = text.lstrip(
-                    "AF_initDataCallback({key: 'ds:1', hash: '2', data:"
-                ).rstrip(", sideChannel: {}});")
-                AF_initDataCallback = json.loads(text)
-                results = self._parse_AF_initDataCallback(AF_initDataCallback, info)
-                batch = Batch(results, self.session)
-            elif text.startswith("var AF_initDataKeys"):
-                console.print("Found AF_initDataKeys")
-                info.rpcids = re.findall(r"'ds:1' : {id:'(.*)',", text)[0]
-            elif text.startswith("window.WIZ_global_data"):
-                console.print("Found window.WIZ_global_data")
-                WIZ_global_data = json.loads(
-                    re.findall(r"window.WIZ_global_data = (.*);", text)[0]
-                )
-                info.f_sid = WIZ_global_data["FdrFJe"]
-                info.bl = WIZ_global_data["cfb2h"]
-        self._generate_batchexecute_post(info)
-        self._generate_batchexecute_params(info)
-        return batch
-
-    def _parse_batchexecute(self, content: str, info: SearchInfo) -> Batch:
-        AF_initDataCallback = json.loads(
-            re.findall(r'"HoAMBc","(.*)",null,null,null,"generic"]]\n', content)[0]
-            .replace('\\"', '"')
-            .replace('\\\\"', '\\"')
-        )
-        results = self._parse_AF_initDataCallback(AF_initDataCallback, info)
+        if not results:
+            return None
         batch = Batch(results, self.session)
-        self._generate_batchexecute_post(info)
-        info.batchexecute_params["_reqid"] = (
-            info.batchexecute_params["_reqid"] % 100000
-        ) + (100000 * info.page_num)
         return batch
 
-    def _generate_batchexecute_post(self, info: SearchInfo) -> None:
-        if info.cursor is None:
-            info.batchexecute_post = None
-            return
-        data = (
-            [None, None, info.grid_state]
-            + 25 * [None]
-            + [[info.search_query, "en"] + 18 * [None] + [info.tbs] + 9 * [None] + [[]]]
-            + 8 * [None]
-            + [[None, info.cursor[0], info.cursor[1]]]
-            + [None, False]
-        )
-        f_req = json.dumps(
-            [
-                [
-                    [
-                        info.rpcids,
-                        json.dumps(data),
-                        None,
-                        "generic",
-                    ]
-                ]
-            ]
-        )
-        info.batchexecute_post = {"f.req": f_req, "": ""}
-        info.page_num = info.grid_state[0]
-
-    def _generate_batchexecute_params(self, info: SearchInfo):
-        now = datetime.now()
-        if os.name == "nt":
-            hl = (
-                locale.windows_locale[ctypes.windll.kernel32.GetUserDefaultUILanguage()]
-            ).replace("_", "-")
-        else:
-            hl = os.getenv("LANG", "en_US").split(".")[0].replace("_", "-")
-        info.batchexecute_params = {
-            "rpcids": info.rpcids,
-            "source-path": "/search",
-            "f.sid": info.f_sid,
-            "bl": info.bl,
-            "hl": hl,
-            "authuser": "",
-            "soc-app": "162",
-            "soc-platform": "1",
-            "soc-device": "1",
-            "_reqid": 1
-            + (3600 * now.hour + 60 * now.minute + now.second)
-            + (100000 * 1),
-            "rt": "c",
-        }
-
-    async def _get_params(self, search_info: SearchInfo):
-        response = await self._make_request("GET", URL.BASE)
-        content = await response.content.read()
-        w, h = choice(
-            (
-                (3840, 2160),
-                (2560, 1440),
-                (1920, 1080),
-                (1366, 768),
-                (1280, 720),
-                (1024, 576),
-            )
-        )
-        search_info.params.update(
-            {
-                "biw": randint(int(w * 0.75), w),
-                "bih": randint(int(h * 0.75), h),
-            }
-        )
-        soup = BeautifulSoup(content, "lxml")
-        div = soup.find("div", {"id": "tophf"})
-        inputs = div.find_all("input")
-        for input in inputs:
-            if not input.get("value", None):
+    def _parse_response(self, content: str, info: SearchInfo) -> Batch:
+        content = content.lstrip(")]}'\n")
+        parts = []
+        vet = None
+        while True:
+            try:
+                index = content.index(";")
+            except ValueError:
+                break
+            result = bool(re.match(r"^[0-9A-Fa-f]+", content[:index]))
+            if not result:
+                content = content[index + 1 :]
                 continue
-            value = input["value"]
-            search_info.params[input["name"]] = value
+            length = int(content[:index], 16)
+            part = content[index + 1 : length + index + 1]
+            content = content[length + index + 1 :]
+            if not part:
+                continue
+            parts.append(part)
+            if "arc-npt" in part:
+                soup = BeautifulSoup(part, "lxml")
+                arc = soup.find(attrs={"class": "arc-npt"})
+                vet = arc["data-ved"]
+        info.vet = vet
+        data = json.loads(parts[-1])
+        objects = []
+        for obj in data[0]:
+            try:
+                objects.append(json.loads(obj[1]))
+            except json.JSONDecodeError:
+                continue
+        batch = self._parse_images(objects)
+
+        return batch
+
+    def _form_async_query(self, _id: str, info: SearchInfo):
+        _pms = re.search(
+            "/k=([^/]+)",
+            info.xjs["basecomb"],
+        )
+        if not _pms:
+            _pms = "s"
+        else:
+            _pms = _pms.group(1).split(".")[1]
+        params = {
+            "arc_id": _id.lstrip("arc-") + str(info.page_num * 10),
+            "ffilt": "all",
+            "ve_name": "MoreResultsContainer",
+            "use_ac": "false",
+            "inf": "1",
+            "_id": _id + str(info.page_num * 10),
+            "_pms": _pms,
+            "_fmt": "pc",
+            "_basejs": (info.xjs["basejs"]),
+            "_basecss": (info.xjs["basecss"]),
+            "_basecomb": (info.xjs["basecomb"]),
+        }
+        text = ",".join(f"{key}:{value}" for key, value in params.items())
+        return text
+
+    def _get_params(self, info: SearchInfo):
+        async_query = self._form_async_query(info.arc_srp, info)
+
+        info.page_num += 1
+
+        params = {
+            "vet": "1" + info.vet + "..i",
+            "ved": info.ved,
+            "bl": info.kBL,
+            "s": info.sn or "images",
+            "opi": info.kOPI,
+            "udm": info.udm,
+            # yv is always assigned the value 3.
+            "yv": "3",
+            "q": quote_plus(info.search_query),
+            "sca_esv": info.sca_esv,
+            "as_st": info.as_st or "y",
+            "ei": info.kEI,
+            "start": str(info.page_num * 10),
+            "sa": "N",
+            # asearch most likely indicates the reason for loading, and arc indicates that the reason is scrolling through the page.
+            "asearch": "arc",
+            "cs": "0",
+            "async": async_query,
+        }
+        return params
+
+    async def _switch_safe_search(self, info: SearchInfo):
+        response = await self._make_request("GET", URL.SAFESEARCH)
+        content = await response.text()
+        soup = BeautifulSoup(content, "lxml")
+        attribute = {
+            SafeSearch.FILTER: "data-setprefs-filter-url",
+            SafeSearch.BLUR: "data-setprefs-blur-url",
+            SafeSearch.OFF: "data-setprefs-off-url",
+        }[info.safe_search]
+        element = soup.find(attrs={attribute: True})
+        url = URL.BASE + element[attribute]
+        response = await self._make_request("GET", url)
+        if response.status == 204:
+            return True
+        return False
 
     async def _make_request(
         self, method: str, url: str, params=None
@@ -367,8 +476,7 @@ if __name__ == "__main__":
     async def main():
         try:
             google = ImageDownloader()
-            async for batch in google.search("Hello world"):
-                print(batch)
+            await google.download("Hello world", "./images/")
         except Exception:
             console.print_exception(show_locals=False)
         finally:

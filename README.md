@@ -2,8 +2,6 @@
 
 > [Русский](https://github.com/holy-jesus/HolyImageDownloader/blob/main/README_ru.md)
 
-### This program is broken at the moment, as Google have updated their front-end and how it gets new images. In the [reverse folder](reverse/) I'm doing some analysis/reverse engineering to figure it out.
-
 This module is in an early stage of development, hence there's a lot of unimplemented functionality, broken features, and inadequate documentation, etc. Additionally, with each commit, everything can significantly change, break, etc.
 
 ## Key Features
